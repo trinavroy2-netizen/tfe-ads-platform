@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TFE Ad Widget — Local Test</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body{font-family:system-ui,sans-serif;max-width:1320px;margin:40px auto;padding:0 16px;}
+  h1{font-size:20px;}
+  .placeholder{background:#f4f4f4;padding:40px;text-align:center;color:#999;border-radius:8px;margin:16px 0;}
+</style>
+</head>
+<body>
+  <h1>ToolsForEngineers.com — Homepage (local test)</h1>
+  <div class="placeholder">Page content above the ad slot</div>
+
+  <div class="tfe-ad-widget"
+       data-vendor="toolsforengineers"
+       data-placement="homepage"
+       data-api-key="6e70984471b24a6d9d4c5999267e9537"
+       data-api-base="http://localhost:8000">
+  </div>
+
+  <div class="placeholder">Page content below the ad slot</div>
+
+  <!-- <h2>Hydro dashboard placement</h2>
+  <div class="tfe-ad-widget"
+       data-vendor="toolsforengineers"
+       data-placement="hydro"
+       data-api-key="ee873ca66d094078b1d93f8742cd3831"
+       data-api-base="http://localhost:8000">
+  </div> -->
+
+  <script src="./tfe-ad-widget.js"></script>
+</body>
+</html>

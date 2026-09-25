@@ -1,0 +1,22 @@
+# Python
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.env
+backend/venv/
+backend/*.db
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Python virtual environments
+venv/
+.venv/
+
+# Node / Next.js
+dashboard/node_modules/
+dashboard/.next/
+dashboard/.env.local
+dashboard/tsconfig.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db

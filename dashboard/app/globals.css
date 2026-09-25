@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  background: #0d0f14;
+  color: #e6e8ec;
+}
+
+input, select, textarea {
+  background: #1a1f29;
+  border: 1px solid #2a3140;
+  color: #e6e8ec;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 14px;
+  width: 100%;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #2f6fed;
+}
+
+label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #8a94a6;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.btn {
+  background: #2f6fed;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+}
+.btn:hover { background: #255bc7; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid #2a3140;
+  color: #e6e8ec;
+}
+.btn-secondary:hover { background: #1a1f29; }
+
+.btn-danger { background: #e0433c; }
+.btn-danger:hover { background: #c73832; }
+
+.card {
+  background: #12151c;
+  border: 1px solid #1f2530;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; color: #8a94a6; font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; padding: 10px 12px; border-bottom: 1px solid #1f2530; }
+td { padding: 10px 12px; border-bottom: 1px solid #171b24; vertical-align: middle; }
+tr:hover td { background: #151a23; }
+
+.badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+.badge-active { background: rgba(43,196,109,.15); color: #2bc46d; }
+.badge-inactive { background: rgba(224,67,60,.15); color: #e0433c; }
