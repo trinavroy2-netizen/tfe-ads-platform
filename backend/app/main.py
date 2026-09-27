@@ -4,15 +4,23 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from config import settings
-from database import Base, engine, SessionLocal
+from .config import settings
+from .database import Base, engine, SessionLocal
 from . import models
-from security import hash_password
-from routers import auth, vendors, placements, ads, upload, public
+from .security import hash_password
+from .routers import auth, vendors, placements, ads, upload, public
 
+
+# =========================================================
+# DATABASE
+# =========================================================
 
 Base.metadata.create_all(bind=engine)
 
+
+# =========================================================
+# FASTAPI APP
+# =========================================================
 
 app = FastAPI(
     title="TFE Ads Platform API",
@@ -20,17 +28,18 @@ app = FastAPI(
 )
 
 
-# ---------------------------------------------------------
-# Dynamic Vendor CORS
-# ---------------------------------------------------------
+# =========================================================
+# DYNAMIC VENDOR CORS
+# =========================================================
+
 def normalize_origin(origin: str | None) -> str:
     """
     Normalize a browser Origin value.
 
     Examples:
-        https://example.com/     -> https://example.com
-        https://www.example.com  -> https://www.example.com
-        http://localhost:5500    -> http://localhost:5500
+        https://example.com/    -> https://example.com
+        https://www.example.com -> https://www.example.com
+        http://localhost:5500   -> http://localhost:5500
     """
 
     if not origin:
@@ -47,7 +56,10 @@ def normalize_origin(origin: str | None) -> str:
         if not parsed.netloc:
             return ""
 
-        return f"{parsed.scheme.lower()}://{parsed.netloc.lower()}"
+        return (
+            f"{parsed.scheme.lower()}://"
+            f"{parsed.netloc.lower()}"
+        )
 
     except Exception:
         return ""
@@ -57,54 +69,71 @@ def get_vendor_origins(db) -> set[str]:
     """
     Build allowed CORS origins dynamically from active vendors.
 
-    Vendor.allowed_domains supports:
+    Supported database values:
 
-        example.com,www.example.com
+        example.com
+        www.example.com
 
-    and:
+    or:
 
         https://example.com
         http://localhost:5500
+
+    Multiple domains can be comma-separated.
     """
 
     origins: set[str] = set()
 
     vendors = (
         db.query(models.Vendor)
-        .filter(models.Vendor.is_active == True)  # noqa: E712
+        .filter(
+            models.Vendor.is_active == True  # noqa: E712
+        )
         .all()
     )
 
     for vendor in vendors:
-        raw = vendor.allowed_domains or ""
 
-        for item in raw.split(","):
+        raw_domains = vendor.allowed_domains or ""
+
+        for item in raw_domains.split(","):
+
             value = item.strip()
 
             if not value:
                 continue
 
+            # -------------------------------------------------
             # Domain-only format
+            # -------------------------------------------------
             #
+            # Example:
             # example.com
             #
-            # Allow both HTTP and HTTPS.
+            # Automatically allow:
+            # https://example.com
+            # http://example.com
+            #
+
             if "://" not in value:
+
                 value = value.rstrip("/")
 
                 if value:
                     origins.add(
                         f"https://{value.lower()}"
                     )
+
                     origins.add(
                         f"http://{value.lower()}"
                     )
 
                 continue
 
+            # -------------------------------------------------
             # Full origin format
-            #
-            # https://example.com
+            # -------------------------------------------------
+
             normalized = normalize_origin(value)
 
             if normalized:
@@ -115,39 +144,36 @@ def get_vendor_origins(db) -> set[str]:
 
 class DynamicVendorCORSMiddleware(BaseHTTPMiddleware):
     """
-    Dynamically handles CORS using Vendor.allowed_domains.
+    Dynamic CORS middleware.
 
-    No Render CORS_ORIGINS configuration is required for
-    vendor websites.
+    Allowed origins are loaded from active vendors'
+    allowed_domains values in the database.
 
-    Example:
-
-        Vendor:
-            ToolsForEngineers
-
-        Allowed Domains:
-            toolsforengineers.com
-            www.toolsforengineers.com
-
-    Then those origins automatically receive the appropriate
-    CORS headers.
+    No Render CORS_ORIGINS update is required when
+    vendor domains are changed through the dashboard.
     """
 
     async def dispatch(self, request, call_next):
+
+        # -----------------------------------------------------
+        # Browser Origin
+        # -----------------------------------------------------
 
         origin = normalize_origin(
             request.headers.get("origin")
         )
 
-        # -------------------------------------------------
+        # -----------------------------------------------------
         # Non-browser request
-        # -------------------------------------------------
+        # -----------------------------------------------------
+
         if not origin:
             return await call_next(request)
 
-        # -------------------------------------------------
+        # -----------------------------------------------------
         # Load active vendor domains
-        # -------------------------------------------------
+        # -----------------------------------------------------
+
         db = SessionLocal()
 
         try:
@@ -155,16 +181,13 @@ class DynamicVendorCORSMiddleware(BaseHTTPMiddleware):
         finally:
             db.close()
 
-        # -------------------------------------------------
-        # Browser preflight request
-        # -------------------------------------------------
+        # -----------------------------------------------------
+        # OPTIONS / Preflight
+        # -----------------------------------------------------
+
         if request.method == "OPTIONS":
 
-            # Unknown origin.
-            #
-            # Let the normal request pipeline continue.
-            # Browser will reject it because no CORS headers
-            # will be added.
+            # Unknown origin
             if origin not in allowed_origins:
                 return await call_next(request)
 
@@ -189,10 +212,13 @@ class DynamicVendorCORSMiddleware(BaseHTTPMiddleware):
             )
 
             if requested_headers:
+
                 response.headers[
                     "Access-Control-Allow-Headers"
                 ] = requested_headers
+
             else:
+
                 response.headers[
                     "Access-Control-Allow-Headers"
                 ] = "*"
@@ -201,9 +227,10 @@ class DynamicVendorCORSMiddleware(BaseHTTPMiddleware):
 
             return response
 
-        # -------------------------------------------------
+        # -----------------------------------------------------
         # Normal browser request
-        # -------------------------------------------------
+        # -----------------------------------------------------
+
         response = await call_next(request)
 
         if origin in allowed_origins:
@@ -221,33 +248,40 @@ class DynamicVendorCORSMiddleware(BaseHTTPMiddleware):
         return response
 
 
-# ---------------------------------------------------------
-# Add Dynamic CORS Middleware
-# ---------------------------------------------------------
+# =========================================================
+# ADD DYNAMIC CORS MIDDLEWARE
+# =========================================================
+
 app.add_middleware(
     DynamicVendorCORSMiddleware
 )
 
 
-# ---------------------------------------------------------
-# Static Files
-# ---------------------------------------------------------
+# =========================================================
+# STATIC FILES
+# =========================================================
+
 app.mount(
     "/uploads",
-    StaticFiles(directory=settings.upload_dir),
+    StaticFiles(
+        directory=settings.upload_dir
+    ),
     name="uploads",
 )
 
 app.mount(
     "/widget",
-    StaticFiles(directory="widget"),
+    StaticFiles(
+        directory="widget"
+    ),
     name="widget",
 )
 
 
-# ---------------------------------------------------------
-# API Routers
-# ---------------------------------------------------------
+# =========================================================
+# API ROUTERS
+# =========================================================
+
 app.include_router(auth.router)
 app.include_router(vendors.router)
 app.include_router(placements.router)
@@ -256,14 +290,17 @@ app.include_router(upload.router)
 app.include_router(public.router)
 
 
-# ---------------------------------------------------------
-# Admin Bootstrap
-# ---------------------------------------------------------
+# =========================================================
+# ADMIN BOOTSTRAP
+# =========================================================
+
 @app.on_event("startup")
 def bootstrap_admin():
+
     db = SessionLocal()
 
     try:
+
         if not db.query(models.User).first():
 
             admin = models.User(
@@ -278,7 +315,7 @@ def bootstrap_admin():
             db.commit()
 
             print(
-                f"[bootstrap] Created default admin user: "
+                "[bootstrap] Created default admin user: "
                 f"{settings.admin_email}"
             )
 
@@ -286,9 +323,12 @@ def bootstrap_admin():
         db.close()
 
 
-# ---------------------------------------------------------
-# Health Check
-# ---------------------------------------------------------
+# =========================================================
+# HEALTH CHECK
+# =========================================================
+
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok"
+    }
