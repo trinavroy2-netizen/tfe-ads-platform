@@ -6,7 +6,7 @@
  *
  * Features:
  * - Fully responsive
- * - Preserves banner aspect ratio
+ * - Preserves actual banner aspect ratio
  * - No image cropping
  * - No image stretching
  * - Desktop / tablet / mobile support
@@ -27,7 +27,6 @@
     interval: 4000,
     transition: 600,
 
-    // TFE standard homepage banner ratio
     desktopWidth: 1320,
     desktopHeight: 300,
   };
@@ -79,10 +78,9 @@
       /*
        * TFE AD WIDGET
        *
-       * The widget width follows the host container.
-       * The banner ratio is controlled by aspect-ratio.
-       *
-       * 1320 × 300 = 4.4:1
+       * IMPORTANT:
+       * The widget does NOT force a fixed height.
+       * The image controls the actual height.
        */
 
       .tfe-ad-widget {
@@ -91,6 +89,9 @@
 
         width: 100%;
         max-width: 1320px;
+
+        height: auto;
+        min-height: 0;
 
         margin: 0 auto;
         padding: 0;
@@ -102,21 +103,18 @@
         line-height: 0;
 
         overflow: hidden;
-
-        /*
-         * Standard TFE homepage banner ratio.
-         */
-        aspect-ratio: 1320 / 300;
       }
 
       /*
        * Carousel track
+       *
+       * No fixed height.
        */
       .tfe-ad-track {
         display: flex;
 
         width: 100%;
-        height: 100%;
+        height: auto;
 
         margin: 0;
         padding: 0;
@@ -132,8 +130,9 @@
       }
 
       /*
-       * Every slide occupies exactly one
-       * widget width.
+       * Each slide has the width of the widget.
+       *
+       * Height is NOT forced.
        */
       .tfe-ad-slide {
         position: relative;
@@ -141,7 +140,10 @@
         flex: 0 0 100%;
 
         width: 100%;
-        height: 100%;
+        height: auto;
+
+        min-width: 0;
+        min-height: 0;
 
         margin: 0;
         padding: 0;
@@ -154,13 +156,16 @@
       }
 
       /*
-       * Link fills the slide.
+       * Link follows image size.
+       *
+       * IMPORTANT:
+       * Do not force height: 100%.
        */
       .tfe-ad-slide a {
-        display: flex;
+        display: block;
 
         width: 100%;
-        height: 100%;
+        height: auto;
 
         max-width: 100%;
 
@@ -173,20 +178,23 @@
 
         line-height: 0;
 
-        align-items: center;
-        justify-content: center;
-
         overflow: hidden;
       }
 
       /*
-       * IMPORTANT:
+       * IMAGE
        *
-       * width: 100%
-       * height: auto
+       * Width shrinks with available space.
+       * Height is calculated automatically from
+       * the image's natural aspect ratio.
        *
-       * This allows the actual image to preserve
-       * its own aspect ratio.
+       * Example:
+       *
+       * 1320 × 300
+       * 1000 × 227
+       * 768  × 175
+       * 390  × 89
+       * 320  × 73
        *
        * No crop.
        * No stretch.
@@ -198,14 +206,10 @@
         height: auto;
 
         max-width: 100%;
-        max-height: 100%;
-
         min-width: 0;
-        min-height: 0;
 
         margin: 0;
         padding: 0;
-
         border: 0;
 
         box-sizing: border-box;
@@ -215,7 +219,7 @@
 
         vertical-align: top;
 
-        flex: 0 0 auto;
+        flex: none;
       }
 
       /*
@@ -298,30 +302,33 @@
 
       /*
        * TABLET
-       *
-       * Width continues to follow the host container.
-       * The 1320:300 ratio is preserved.
-       */
-      @media (max-width: 1320px) {
-        .tfe-ad-widget {
-          width: 100%;
-          max-width: 100%;
-
-          aspect-ratio: 1320 / 300;
-        }
-      }
-
-      /*
-       * TABLET / SMALL SCREEN
        */
       @media (max-width: 900px) {
         .tfe-ad-widget {
           width: 100%;
           max-width: 100%;
-
-          aspect-ratio: 1320 / 300;
+          height: auto;
+          min-height: 0;
 
           border-radius: 6px;
+        }
+
+        .tfe-ad-track {
+          height: auto;
+        }
+
+        .tfe-ad-slide {
+          height: auto;
+        }
+
+        .tfe-ad-slide a {
+          height: auto;
+        }
+
+        .tfe-ad-slide img {
+          width: 100%;
+          height: auto;
+          max-width: 100%;
         }
 
         .tfe-ad-dots {
@@ -336,10 +343,28 @@
         .tfe-ad-widget {
           width: 100%;
           max-width: 100%;
-
-          aspect-ratio: 1320 / 300;
+          height: auto;
+          min-height: 0;
 
           border-radius: 4px;
+        }
+
+        .tfe-ad-track {
+          height: auto;
+        }
+
+        .tfe-ad-slide {
+          height: auto;
+        }
+
+        .tfe-ad-slide a {
+          height: auto;
+        }
+
+        .tfe-ad-slide img {
+          width: 100%;
+          height: auto;
+          max-width: 100%;
         }
 
         .tfe-ad-dots {
@@ -399,13 +424,10 @@
 
     fetch(url, {
       method: "POST",
-
       headers: {
         "Content-Type": "application/json",
       },
-
       body: json,
-
       keepalive: true,
     }).catch(function () {});
   }
@@ -531,13 +553,8 @@
         d.desktop_width
       );
 
-    var desktopHeight =
-      parseFloat(
-        d.desktop_height
-      );
-
     /*
-     * Fallback to TFE standard.
+     * Fallback only for maximum width.
      */
     if (
       !isFinite(desktopWidth) ||
@@ -547,53 +564,33 @@
         DEFAULTS.desktopWidth;
     }
 
-    if (
-      !isFinite(desktopHeight) ||
-      desktopHeight <= 0
-    ) {
-      desktopHeight =
-        DEFAULTS.desktopHeight;
-    }
-
     /*
-     * The widget always follows the host
-     * container width.
+     * IMPORTANT:
+     *
+     * Do NOT set aspect-ratio.
+     * Do NOT set fixed height.
+     *
+     * The image's natural dimensions
+     * determine the height.
      */
+
     self.container.style.width =
       "100%";
 
     self.container.style.maxWidth =
       desktopWidth + "px";
 
+    self.container.style.height =
+      "auto";
+
+    self.container.style.minHeight =
+      "0";
+
     self.container.style.boxSizing =
       "border-box";
 
     self.container.style.overflow =
       "hidden";
-
-    /*
-     * Preserve placement aspect ratio.
-     *
-     * Example:
-     *
-     * 1320 × 300
-     * 660 × 150
-     * 390 × 88.6
-     * 320 × 72.7
-     */
-    self.container.style.aspectRatio =
-      desktopWidth +
-      " / " +
-      desktopHeight;
-
-    /*
-     * Do NOT set a fixed height here.
-     *
-     * Height is automatically calculated
-     * from aspect-ratio.
-     */
-    self.container.style.height =
-      "auto";
   };
 
   /* =====================================================
@@ -688,12 +685,12 @@
       }
 
       /*
-       * Apply placement ratio.
+       * Apply width only.
        */
       self.applySizing();
 
       /*
-       * Horizontal carousel.
+       * Carousel track.
        */
       var track =
         el("div", {
@@ -707,6 +704,7 @@
 
       self.ads.forEach(
         function (ad, i) {
+
           /*
            * IMAGE
            */
@@ -733,20 +731,9 @@
             );
 
           /*
-           * IMPORTANT IMAGE RULES
+           * IMPORTANT:
            *
-           * Width follows slide.
-           * Height remains AUTO.
-           *
-           * Therefore:
-           *
-           * 1320 × 300
-           * ↓
-           * 768 × 174.5
-           * ↓
-           * 390 × 88.6
-           * ↓
-           * 320 × 72.7
+           * Natural image ratio.
            */
           img.style.display =
             "block";
@@ -758,9 +745,6 @@
             "auto";
 
           img.style.maxWidth =
-            "100%";
-
-          img.style.maxHeight =
             "100%";
 
           img.style.minWidth =
@@ -943,8 +927,7 @@
       self.setupResizeObserver();
 
       /*
-       * Autoplay only when
-       * multiple ads exist.
+       * Autoplay.
        */
       if (
         self.ads.length > 1
@@ -1014,7 +997,10 @@
       ) {
         Array.prototype.forEach.call(
           self.dotsWrap.children,
-          function (dot, idx) {
+          function (
+            dot,
+            idx
+          ) {
             dot.classList.toggle(
               "active",
               idx === i
@@ -1160,9 +1146,13 @@
 
       var observer =
         new IntersectionObserver(
-          function (entries) {
+          function (
+            entries
+          ) {
             entries.forEach(
-              function (entry) {
+              function (
+                entry
+              ) {
                 if (
                   entry.isIntersecting
                 ) {
@@ -1220,7 +1210,9 @@
 
     Array.prototype.forEach.call(
       containers,
-      function (container) {
+      function (
+        container
+      ) {
         if (
           !container.getAttribute(
             "data-vendor"
@@ -1269,7 +1261,9 @@
 
     Array.prototype.forEach.call(
       containers,
-      function (container) {
+      function (
+        container
+      ) {
         if (
           container._tfeAdSlot
         ) {
@@ -1307,4 +1301,5 @@
   } else {
     initAll();
   }
+
 })(window, document);
