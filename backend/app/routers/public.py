@@ -2,11 +2,11 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from .config import settings
-from .database import Base, engine, SessionLocal
+from ..config import settings
+from ..database import Base, engine, SessionLocal
 from . import models
-from .security import hash_password
-from .routers import auth, vendors, placements, ads, upload, public
+from ..security import hash_password
+from ..routers import auth, vendors, placements, ads, upload, public
 
 from urllib.parse import urlparse
 
