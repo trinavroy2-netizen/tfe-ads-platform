@@ -1,23 +1,36 @@
 /*!
  * TFE Ad Widget — embeddable ad slot for vendor websites
  *
- * No build step, no framework dependency.
+ * No build step.
+ * No framework dependency.
+ *
+ * Features:
+ * - Fully responsive
+ * - Preserves original image aspect ratio
+ * - No image cropping
+ * - Desktop / tablet / mobile support
+ * - Multiple slots per page
+ * - Auto rotation
+ * - Dot navigation
+ * - Impression tracking
+ * - Click tracking
+ * - IntersectionObserver visibility tracking
+ * - ResizeObserver responsive recalculation
  *
  * Example:
  *
- * <div class="tfe-ad-widget"
- *      data-vendor="toolsforengineers"
- *      data-placement="homepage"
- *      data-api-key="YOUR_VENDOR_API_KEY"
- *      data-api-base="https://ads-api.mahavirshree.com">
+ * <div
+ *   class="tfe-ad-widget"
+ *   data-vendor="toolsforengineers"
+ *   data-placement="homepage"
+ *   data-api-key="YOUR_VENDOR_API_KEY"
+ *   data-api-base="https://ads-api.mahavirshree.com">
  * </div>
  *
  * <script
  *   src="https://ads-api.mahavirshree.com/widget/tfe-ad-widget.js"
  *   async>
  * </script>
- *
- * Multiple slots on one page are supported.
  */
 
 (function (window, document) {
@@ -55,50 +68,72 @@
     return e;
   }
 
-  /**
-   * Inject widget CSS only once.
+  /*
+   * -------------------------------------------------------
+   * CSS
+   * -------------------------------------------------------
    *
-   * Important:
-   * - Image uses width:100% and height:auto.
-   * - object-fit:contain is used as an additional safeguard.
-   * - The widget does NOT force tablet/mobile heights.
-   * - The image therefore keeps its original aspect ratio.
+   * Important responsive rules:
+   *
+   * - Widget width is always 100% of available space.
+   * - max-width comes from placement desktop_width.
+   * - Images use width:100% + height:auto.
+   * - No fixed height is applied.
+   * - No object-fit:cover.
+   * - Therefore the creative keeps its original ratio.
    */
   function injectStylesOnce() {
-    if (qs("#tfe-ad-widget-styles")) return;
+    if (qs("#tfe-ad-widget-styles")) {
+      return;
+    }
 
     var css =
       ".tfe-ad-widget{" +
       "position:relative;" +
+      "display:block;" +
       "width:100%;" +
       "max-width:1320px;" +
       "margin:0 auto;" +
+      "padding:0;" +
       "overflow:hidden;" +
-      "border-radius:8px;" +
-      "background:transparent;" +
       "box-sizing:border-box;" +
+      "background:transparent;" +
+      "line-height:0;" +
       "}" +
 
       ".tfe-ad-track{" +
       "display:flex;" +
       "width:100%;" +
+      "margin:0;" +
+      "padding:0;" +
       "transition:transform " +
       DEFAULTS.transition +
       "ms ease-in-out;" +
       "will-change:transform;" +
+      "box-sizing:border-box;" +
       "}" +
 
       ".tfe-ad-slide{" +
       "flex:0 0 100%;" +
       "width:100%;" +
+      "min-width:0;" +
+      "margin:0;" +
+      "padding:0;" +
       "position:relative;" +
       "box-sizing:border-box;" +
+      "overflow:hidden;" +
+      "line-height:0;" +
       "}" +
 
       ".tfe-ad-slide a{" +
       "display:block;" +
       "width:100%;" +
+      "max-width:100%;" +
+      "margin:0;" +
+      "padding:0;" +
       "text-decoration:none;" +
+      "line-height:0;" +
+      "box-sizing:border-box;" +
       "}" +
 
       ".tfe-ad-slide img{" +
@@ -106,10 +141,12 @@
       "width:100%;" +
       "height:auto;" +
       "max-width:100%;" +
-      "object-fit:contain;" +
-      "border:0;" +
+      "min-width:0;" +
       "margin:0;" +
       "padding:0;" +
+      "border:0;" +
+      "box-sizing:border-box;" +
+      "object-fit:initial;" +
       "}" +
 
       ".tfe-ad-dots{" +
@@ -119,19 +156,24 @@
       "right:0;" +
       "display:flex;" +
       "justify-content:center;" +
+      "align-items:center;" +
       "gap:6px;" +
-      "z-index:2;" +
+      "z-index:5;" +
       "pointer-events:none;" +
+      "line-height:normal;" +
       "}" +
 
       ".tfe-ad-dot{" +
       "width:7px;" +
       "height:7px;" +
+      "min-width:7px;" +
+      "min-height:7px;" +
       "border-radius:50%;" +
       "background:rgba(255,255,255,.65);" +
-      "cursor:pointer;" +
       "border:1px solid rgba(0,0,0,.15);" +
       "padding:0;" +
+      "margin:0;" +
+      "cursor:pointer;" +
       "pointer-events:auto;" +
       "box-sizing:border-box;" +
       "}" +
@@ -140,23 +182,24 @@
       "background:#1a73e8;" +
       "}" +
 
-      ".tfe-ad-widget:empty{" +
-      "display:none;" +
-      "}" +
-
       ".tfe-ad-label{" +
       "position:absolute;" +
       "top:4px;" +
       "right:6px;" +
       "font:10px/1 sans-serif;" +
       "color:rgba(0,0,0,.35);" +
-      "z-index:2;" +
+      "z-index:6;" +
       "letter-spacing:.05em;" +
       "pointer-events:none;" +
       "}" +
 
+      ".tfe-ad-widget:empty{" +
+      "display:none;" +
+      "}" +
+
       "@media(max-width:1320px){" +
       ".tfe-ad-widget{" +
+      "width:100%;" +
       "max-width:100%;" +
       "}" +
       "}" +
@@ -167,6 +210,9 @@
       "max-width:100%;" +
       "border-radius:6px;" +
       "}" +
+      ".tfe-ad-dots{" +
+      "bottom:6px;" +
+      "}" +
       "}" +
 
       "@media(max-width:650px){" +
@@ -175,18 +221,33 @@
       "max-width:100%;" +
       "border-radius:4px;" +
       "}" +
+      ".tfe-ad-dots{" +
+      "bottom:5px;" +
+      "gap:5px;" +
+      "}" +
+      ".tfe-ad-dot{" +
+      "width:6px;" +
+      "height:6px;" +
+      "min-width:6px;" +
+      "min-height:6px;" +
+      "}" +
       "}";
 
     var style = el("style", {
       id: "tfe-ad-widget-styles",
     });
 
-    style.appendChild(document.createTextNode(css));
+    style.appendChild(
+      document.createTextNode(css)
+    );
+
     document.head.appendChild(style);
   }
 
-  /**
-   * Send impression/click tracking.
+  /*
+   * -------------------------------------------------------
+   * Tracking
+   * -------------------------------------------------------
    */
   function sendBeacon(apiBase, body) {
     var url =
@@ -220,8 +281,10 @@
     }).catch(function () {});
   }
 
-  /**
-   * Ad slot instance.
+  /*
+   * -------------------------------------------------------
+   * Ad Slot
+   * -------------------------------------------------------
    */
   function AdSlot(container) {
     this.container = container;
@@ -246,17 +309,28 @@
       ) || DEFAULTS.interval;
 
     this.index = 0;
+
     this.ads = [];
+
     this.impressed = {};
+
     this.timer = null;
+
     this.track = null;
+
     this.dotsWrap = null;
+
     this.observer = null;
+
+    this.resizeObserver = null;
+
     this.dimensions = {};
   }
 
-  /**
-   * Fetch ads from API.
+  /*
+   * -------------------------------------------------------
+   * Fetch ads
+   * -------------------------------------------------------
    */
   AdSlot.prototype.fetchAds = function () {
     var self = this;
@@ -287,6 +361,7 @@
 
         return res.json();
       })
+
       .then(function (data) {
         self.ads = Array.isArray(data.ads)
           ? data.ads
@@ -297,6 +372,7 @@
 
         return data;
       })
+
       .catch(function (err) {
         console.warn(
           "[tfe-ad-widget]",
@@ -304,59 +380,114 @@
         );
 
         self.ads = [];
+
         self.dimensions = {};
+
+        return null;
       });
   };
 
-  /**
-   * Apply responsive sizing.
+  /*
+   * -------------------------------------------------------
+   * Apply responsive sizing
+   * -------------------------------------------------------
    *
-   * IMPORTANT:
-   * The previous implementation forced:
+   * Desktop width comes from placement.
    *
-   * desktop height = fixed px
-   * tablet height  = fixed px
-   * mobile height  = fixed px
+   * Example:
    *
-   * That caused the 1320x300 creative to be cropped.
+   * desktop_width = 1320
    *
-   * Now:
-   * - Desktop width remains controlled by placement.
-   * - Height is automatic.
-   * - Image determines its own proportional height.
+   * Parent/container width:
+   *
+   * 1320px -> image 1320px wide
+   * 1000px -> image 1000px wide
+   * 768px  -> image 768px wide
+   * 390px  -> image 390px wide
+   *
+   * Height is NEVER forced.
    */
   AdSlot.prototype.applySizing = function () {
     var d = this.dimensions || {};
 
-    if (d.desktop_width) {
-      var width = parseInt(
-        d.desktop_width,
-        10
-      );
+    var desktopWidth = parseInt(
+      d.desktop_width,
+      10
+    );
 
-      if (
-        !isNaN(width) &&
-        width > 0
-      ) {
-        this.container.style.maxWidth =
-          width + "px";
-      }
+    if (
+      !isNaN(desktopWidth) &&
+      desktopWidth > 0
+    ) {
+      this.container.style.maxWidth =
+        desktopWidth + "px";
+    } else {
+      this.container.style.maxWidth =
+        "1320px";
     }
 
-    /*
-     * Do NOT set fixed height.
-     *
-     * The image uses:
-     * width: 100%;
-     * height: auto;
-     *
-     * This preserves the original aspect ratio.
-     */
+    this.container.style.width = "100%";
+
     this.container.style.height = "auto";
+
+    this.container.style.boxSizing =
+      "border-box";
+
+    this.container.style.overflow =
+      "hidden";
   };
 
-  /**
-   * Render ads.
+  /*
+   * -------------------------------------------------------
+   * Resize handling
+   * -------------------------------------------------------
+   *
+   * The widget itself does not force an image height.
+   *
+   * Browser automatically calculates:
+   *
+   * rendered height =
+   * rendered width / original aspect ratio
+   *
+   * ResizeObserver is used to force a small layout
+   * recalculation when the parent/container changes.
+   */
+  AdSlot.prototype.setupResizeObserver =
+    function () {
+      var self = this;
+
+      if (
+        !("ResizeObserver" in window)
+      ) {
+        return;
+      }
+
+      if (self.resizeObserver) {
+        try {
+          self.resizeObserver.disconnect();
+        } catch (e) {}
+
+        self.resizeObserver = null;
+      }
+
+      self.resizeObserver =
+        new ResizeObserver(function () {
+          if (!self.track) {
+            return;
+          }
+
+          self.goTo(self.index);
+        });
+
+      self.resizeObserver.observe(
+        self.container
+      );
+    };
+
+  /*
+   * -------------------------------------------------------
+   * Render
+   * -------------------------------------------------------
    */
   AdSlot.prototype.render = function () {
     var self = this;
@@ -371,7 +502,18 @@
       self.observer = null;
     }
 
+    if (self.resizeObserver) {
+      try {
+        self.resizeObserver.disconnect();
+      } catch (e) {}
+
+      self.resizeObserver = null;
+    }
+
     self.container.innerHTML = "";
+
+    self.track = null;
+    self.dotsWrap = null;
 
     if (!self.ads.length) {
       self.container.style.height = "auto";
@@ -395,27 +537,39 @@
           ad.alt_text ||
           ad.title ||
           "Advertisement",
-        loading: i === 0 ? "eager" : "lazy",
+        loading:
+          i === 0
+            ? "eager"
+            : "lazy",
         decoding: "async",
       });
 
       /*
-       * Prevent image from causing unexpected
-       * layout overflow.
+       * Explicit responsive image rules.
+       *
+       * Width follows slide/container.
+       * Height remains automatic.
        */
+      img.style.display = "block";
       img.style.width = "100%";
-      img.style.height = "auto";
       img.style.maxWidth = "100%";
-      img.style.objectFit = "contain";
+      img.style.height = "auto";
+      img.style.minWidth = "0";
+      img.style.margin = "0";
+      img.style.padding = "0";
+      img.style.border = "0";
+      img.style.objectFit = "initial";
+      img.style.boxSizing = "border-box";
 
       var anchor = el(
         "a",
         {
-          href: ad.target_url,
+          href: ad.target_url || "#",
           target: ad.open_in_new_tab
             ? "_blank"
             : "_self",
-          rel: "noopener noreferrer sponsored",
+          rel:
+            "noopener noreferrer sponsored",
           "aria-label":
             ad.title ||
             "Advertisement",
@@ -497,19 +651,24 @@
     );
 
     self.track = track;
+
     self.dotsWrap = dotsWrap;
+
     self.index = 0;
 
     self.goTo(0);
+
     self.observeVisibility();
 
+    self.setupResizeObserver();
+
+    /*
+     * Start autoplay only when there are
+     * multiple advertisements.
+     */
     if (self.ads.length > 1) {
       self.startAutoplay();
 
-      /*
-       * Pause autoplay while mouse is
-       * over the ad.
-       */
       self.container.addEventListener(
         "mouseenter",
         function () {
@@ -526,19 +685,23 @@
     }
   };
 
-  /**
-   * Move to selected ad.
+  /*
+   * -------------------------------------------------------
+   * Go to ad
+   * -------------------------------------------------------
    */
   AdSlot.prototype.goTo = function (i) {
-    if (!this.ads.length) return;
+    if (!this.ads.length) {
+      return;
+    }
 
     this.index = i;
 
     if (this.track) {
       this.track.style.transform =
-        "translateX(-" +
+        "translate3d(-" +
         i * 100 +
-        "%)";
+        "%, 0, 0)";
     }
 
     if (this.dotsWrap) {
@@ -556,11 +719,15 @@
     this.markImpression(i);
   };
 
-  /**
-   * Go to next ad.
+  /*
+   * -------------------------------------------------------
+   * Next ad
+   * -------------------------------------------------------
    */
   AdSlot.prototype.next = function () {
-    if (!this.ads.length) return;
+    if (!this.ads.length) {
+      return;
+    }
 
     var nextIndex =
       (this.index + 1) %
@@ -569,42 +736,50 @@
     this.goTo(nextIndex);
   };
 
-  /**
-   * Start autoplay.
+  /*
+   * -------------------------------------------------------
+   * Start autoplay
+   * -------------------------------------------------------
    */
-  AdSlot.prototype.startAutoplay = function () {
-    var self = this;
+  AdSlot.prototype.startAutoplay =
+    function () {
+      var self = this;
 
-    self.stopAutoplay();
+      self.stopAutoplay();
 
-    if (self.ads.length <= 1) {
-      return;
-    }
+      if (self.ads.length <= 1) {
+        return;
+      }
 
-    self.timer =
-      window.setInterval(
-        function () {
-          self.next();
-        },
-        self.intervalMs
-      );
-  };
+      self.timer =
+        window.setInterval(
+          function () {
+            self.next();
+          },
+          self.intervalMs
+        );
+    };
 
-  /**
-   * Stop autoplay.
+  /*
+   * -------------------------------------------------------
+   * Stop autoplay
+   * -------------------------------------------------------
    */
-  AdSlot.prototype.stopAutoplay = function () {
-    if (this.timer) {
-      window.clearInterval(
-        this.timer
-      );
+  AdSlot.prototype.stopAutoplay =
+    function () {
+      if (this.timer) {
+        window.clearInterval(
+          this.timer
+        );
 
-      this.timer = null;
-    }
-  };
+        this.timer = null;
+      }
+    };
 
-  /**
-   * Restart autoplay.
+  /*
+   * -------------------------------------------------------
+   * Restart autoplay
+   * -------------------------------------------------------
    */
   AdSlot.prototype.restartAutoplay =
     function () {
@@ -613,15 +788,19 @@
       }
     };
 
-  /**
-   * Record impression once per ad
-   * for this widget instance.
+  /*
+   * -------------------------------------------------------
+   * Impression tracking
+   * -------------------------------------------------------
    */
   AdSlot.prototype.markImpression =
     function (i) {
       var ad = this.ads[i];
 
-      if (!ad || this.impressed[ad.id]) {
+      if (
+        !ad ||
+        this.impressed[ad.id]
+      ) {
         return;
       }
 
@@ -636,8 +815,10 @@
       );
     };
 
-  /**
-   * Track visibility.
+  /*
+   * -------------------------------------------------------
+   * Visibility tracking
+   * -------------------------------------------------------
    */
   AdSlot.prototype.observeVisibility =
     function () {
@@ -683,8 +864,10 @@
       self.observer = observer;
     };
 
-  /**
-   * Initialize slot.
+  /*
+   * -------------------------------------------------------
+   * Initialize slot
+   * -------------------------------------------------------
    */
   AdSlot.prototype.init = function () {
     var self = this;
@@ -696,8 +879,10 @@
       });
   };
 
-  /**
-   * Initialize all widgets.
+  /*
+   * -------------------------------------------------------
+   * Initialize all widgets
+   * -------------------------------------------------------
    */
   function initAll(root) {
     injectStylesOnce();
@@ -742,8 +927,10 @@
     );
   }
 
-  /**
-   * Refresh all initialized widgets.
+  /*
+   * -------------------------------------------------------
+   * Refresh all initialized widgets
+   * -------------------------------------------------------
    */
   function refreshAll(root) {
     var containers = (
@@ -766,16 +953,20 @@
     );
   }
 
-  /**
-   * Public API.
+  /*
+   * -------------------------------------------------------
+   * Public API
+   * -------------------------------------------------------
    */
   window.TFEAdWidget = {
     init: initAll,
     refresh: refreshAll,
   };
 
-  /**
-   * Auto initialize.
+  /*
+   * -------------------------------------------------------
+   * Auto initialize
+   * -------------------------------------------------------
    */
   if (
     document.readyState ===
