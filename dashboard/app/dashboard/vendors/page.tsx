@@ -13,8 +13,17 @@ export default function VendorsPage() {
     allowed_domains: "",
   });
 
+  const [editForm, setEditForm] = useState({
+    name: "",
+    slug: "",
+    allowed_domains: "",
+  });
+
+  const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+
   const [error, setError] = useState("");
   const [revealedKey, setRevealedKey] = useState<string | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -33,34 +42,78 @@ export default function VendorsPage() {
     load();
   }, []);
 
-async function handleCreate(e: React.FormEvent) {
-  e.preventDefault();
-  setError("");
-  setRevealedKey(null);
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setRevealedKey(null);
 
-  try {
-    const vendor = await api.post<Vendor>(
-      "/api/admin/vendors",
-      form
-    );
+    try {
+      const vendor = await api.post<Vendor>(
+        "/api/admin/vendors",
+        form
+      );
 
-    // Show the newly generated API key immediately after creation
-    if (vendor.api_key) {
-      setRevealedKey(vendor.api_key);
+      if (vendor.api_key) {
+        setRevealedKey(vendor.api_key);
+      }
+
+      setForm({
+        name: "",
+        slug: "",
+        allowed_domains: "",
+      });
+
+      await load();
+    } catch (err: any) {
+      setError(err.message || "Failed to create vendor.");
     }
+  }
 
-    setForm({
+  function openEdit(vendor: Vendor) {
+    setError("");
+    setEditingVendor(vendor);
+
+    setEditForm({
+      name: vendor.name || "",
+      slug: vendor.slug || "",
+      allowed_domains: vendor.allowed_domains || "",
+    });
+  }
+
+  function closeEdit() {
+    if (savingEdit) return;
+
+    setEditingVendor(null);
+
+    setEditForm({
       name: "",
       slug: "",
       allowed_domains: "",
     });
-
-    await load();
-  } catch (err: any) {
-    setError(err.message || "Failed to create vendor.");
   }
-}
 
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!editingVendor) return;
+
+    setError("");
+    setSavingEdit(true);
+
+    try {
+      await api.patch<Vendor>(
+        `/api/admin/vendors/${editingVendor.id}`,
+        editForm
+      );
+
+      closeEdit();
+      await load();
+    } catch (err: any) {
+      setError(err.message || "Failed to update vendor.");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
 
   async function rotate(id: string) {
     if (
@@ -70,6 +123,8 @@ async function handleCreate(e: React.FormEvent) {
     ) {
       return;
     }
+
+    setError("");
 
     try {
       const vendor = await api.post<Vendor>(
@@ -92,6 +147,8 @@ async function handleCreate(e: React.FormEvent) {
       return;
     }
 
+    setError("");
+
     try {
       await api.del(`/api/admin/vendors/${id}`);
       await load();
@@ -104,13 +161,13 @@ async function handleCreate(e: React.FormEvent) {
     <div className="min-h-full bg-[#111111] text-white">
       {/* PAGE HEADER */}
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
+        <div className="mb-2 flex items-center gap-3">
           <h1 className="text-[28px] font-semibold tracking-tight">
             Vendors
           </h1>
         </div>
 
-        <p className="text-sm text-[#999] max-w-3xl">
+        <p className="max-w-3xl text-sm text-[#999]">
           Partner websites that embed the advertising widget.
           Each vendor gets a unique API key to authenticate widget
           requests.
@@ -119,8 +176,16 @@ async function handleCreate(e: React.FormEvent) {
 
       {/* ERROR */}
       {error && (
-        <div className="mb-6 rounded-md border border-red-900/60 bg-red-950/30 px-4 py-3 text-sm text-red-300">
-          {error}
+        <div className="mb-6 flex items-start justify-between gap-4 rounded-md border border-red-900/60 bg-red-950/30 px-4 py-3 text-sm text-red-300">
+          <span>{error}</span>
+
+          <button
+            type="button"
+            onClick={() => setError("")}
+            className="shrink-0 text-xs text-red-400 transition hover:text-red-200"
+          >
+            Close
+          </button>
         </div>
       )}
 
@@ -200,7 +265,7 @@ async function handleCreate(e: React.FormEvent) {
           </div>
 
           {/* BUTTON */}
-          <div className="md:col-span-3 flex items-center justify-between border-t border-[#303030] pt-5">
+          <div className="flex items-center justify-between border-t border-[#303030] pt-5 md:col-span-3">
             <p className="text-xs text-[#777]">
               API credentials will be generated automatically.
             </p>
@@ -237,7 +302,7 @@ async function handleCreate(e: React.FormEvent) {
       )}
 
       {/* VENDORS TABLE */}
-      <section className="rounded-md border border-[#303030] bg-[#1c1c1c] overflow-hidden">
+      <section className="overflow-hidden rounded-md border border-[#303030] bg-[#1c1c1c]">
         {/* TABLE HEADER */}
         <div className="flex flex-col gap-4 border-b border-[#303030] px-5 py-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -325,7 +390,7 @@ async function handleCreate(e: React.FormEvent) {
                       </div>
 
                       {vendor.allowed_domains && (
-                        <div className="mt-1 text-xs text-[#666]">
+                        <div className="mt-1 max-w-[260px] break-words text-xs text-[#666]">
                           {vendor.allowed_domains}
                         </div>
                       )}
@@ -371,14 +436,27 @@ async function handleCreate(e: React.FormEvent) {
                     {/* ACTIONS */}
                     <td className="px-5 py-4">
                       <div className="flex justify-end gap-2">
+                        {/* EDIT */}
                         <button
+                          type="button"
+                          onClick={() => openEdit(vendor)}
+                          className="h-8 rounded-md border border-[#3a3a3a] bg-[#222] px-3 text-xs text-[#ccc] transition hover:bg-[#2b2b2b] hover:text-white"
+                        >
+                          Edit
+                        </button>
+
+                        {/* ROTATE */}
+                        <button
+                          type="button"
                           onClick={() => rotate(vendor.id)}
                           className="h-8 rounded-md border border-[#3a3a3a] bg-[#222] px-3 text-xs text-[#ccc] transition hover:bg-[#2b2b2b] hover:text-white"
                         >
                           Rotate key
                         </button>
 
+                        {/* DELETE */}
                         <button
+                          type="button"
                           onClick={() => remove(vendor.id)}
                           className="h-8 rounded-md border border-[#4a3030] bg-[#241919] px-3 text-xs text-[#c99] transition hover:bg-[#302020]"
                         >
@@ -392,6 +470,153 @@ async function handleCreate(e: React.FormEvent) {
           </table>
         </div>
       </section>
+
+      {/* EDIT MODAL */}
+      {editingVendor && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-[2px]"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              closeEdit();
+            }
+          }}
+        >
+          <div className="w-full max-w-lg rounded-md border border-[#383838] bg-[#1c1c1c] shadow-2xl">
+            {/* MODAL HEADER */}
+            <div className="flex items-center justify-between border-b border-[#303030] px-5 py-4">
+              <div>
+                <h2 className="text-[15px] font-semibold text-white">
+                  Edit Vendor
+                </h2>
+
+                <p className="mt-1 text-xs text-[#777]">
+                  Update vendor details and authorized domains.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeEdit}
+                disabled={savingEdit}
+                className="flex h-8 w-8 items-center justify-center rounded-md border border-[#333] bg-[#222] text-[#888] transition hover:bg-[#2b2b2b] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* MODAL FORM */}
+            <form onSubmit={handleEdit}>
+              <div className="space-y-5 p-5">
+                {/* NAME */}
+                <div>
+                  <label className="mb-2 block text-xs font-medium text-[#aaa]">
+                    Vendor name
+                  </label>
+
+                  <input
+                    value={editForm.name}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        name: e.target.value,
+                      })
+                    }
+                    required
+                    className="h-10 w-full rounded-md border border-[#3a3a3a] bg-[#151515] px-3 text-sm text-white outline-none transition placeholder:text-[#666] focus:border-[#777]"
+                  />
+                </div>
+
+                {/* SLUG */}
+                <div>
+                  <label className="mb-2 block text-xs font-medium text-[#aaa]">
+                    Slug
+                  </label>
+
+                  <input
+                    value={editForm.slug}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        slug: e.target.value,
+                      })
+                    }
+                    required
+                    className="h-10 w-full rounded-md border border-[#3a3a3a] bg-[#151515] px-3 text-sm text-white outline-none transition placeholder:text-[#666] focus:border-[#777]"
+                  />
+
+                  <p className="mt-1.5 text-[11px] text-[#666]">
+                    Changing the slug can affect existing widget
+                    integrations.
+                  </p>
+                </div>
+
+                {/* ALLOWED DOMAINS */}
+                <div>
+                  <label className="mb-2 block text-xs font-medium text-[#aaa]">
+                    Allowed domains
+                  </label>
+
+                  <input
+                    value={editForm.allowed_domains}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        allowed_domains: e.target.value,
+                      })
+                    }
+                    placeholder="toolsforengineers.com,www.toolsforengineers.com"
+                    className="h-10 w-full rounded-md border border-[#3a3a3a] bg-[#151515] px-3 text-sm text-white outline-none transition placeholder:text-[#555] focus:border-[#777]"
+                  />
+
+                  <p className="mt-1.5 text-[11px] leading-4 text-[#666]">
+                    Separate multiple domains with commas. Do not
+                    include paths such as /home or /dashboard.
+                  </p>
+                </div>
+
+                {/* API KEY INFO */}
+                <div className="rounded-md border border-[#303030] bg-[#151515] px-4 py-3">
+                  <div className="text-xs font-medium text-[#aaa]">
+                    API key
+                  </div>
+
+                  <div className="mt-1">
+                    <code className="text-xs text-[#666]">
+                      {editingVendor.api_key.slice(0, 8)}...
+                    </code>
+                  </div>
+
+                  <p className="mt-1 text-[11px] text-[#555]">
+                    Editing vendor details does not change the API
+                    key.
+                  </p>
+                </div>
+              </div>
+
+              {/* MODAL FOOTER */}
+              <div className="flex items-center justify-end gap-2 border-t border-[#303030] px-5 py-4">
+                <button
+                  type="button"
+                  onClick={closeEdit}
+                  disabled={savingEdit}
+                  className="h-9 rounded-md border border-[#3a3a3a] bg-[#222] px-4 text-xs text-[#bbb] transition hover:bg-[#2b2b2b] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="h-9 rounded-md border border-[#444] bg-[#f1f1f1] px-4 text-xs font-medium text-[#111] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {savingEdit ? "Saving..." : "Save changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
