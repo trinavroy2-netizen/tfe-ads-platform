@@ -29,7 +29,7 @@
 
     // TFE standard homepage banner ratio
     desktopWidth: 1320,
-    desktopHeight: 300
+    desktopHeight: 300,
   };
 
   /* =====================================================
@@ -76,6 +76,15 @@
     }
 
     var css = `
+      /*
+       * TFE AD WIDGET
+       *
+       * The widget width follows the host container.
+       * The banner ratio is controlled by aspect-ratio.
+       *
+       * 1320 × 300 = 4.4:1
+       */
+
       .tfe-ad-widget {
         position: relative;
         display: block;
@@ -92,20 +101,17 @@
 
         line-height: 0;
 
-        /*
-         * Hide anything outside the banner.
-         * The image itself is never cropped because
-         * it uses contain + exact aspect ratio.
-         */
         overflow: hidden;
 
         /*
-         * Standard TFE banner ratio:
-         * 1320 / 300 = 4.4
+         * Standard TFE homepage banner ratio.
          */
         aspect-ratio: 1320 / 300;
       }
 
+      /*
+       * Carousel track
+       */
       .tfe-ad-track {
         display: flex;
 
@@ -125,6 +131,10 @@
         will-change: transform;
       }
 
+      /*
+       * Every slide occupies exactly one
+       * widget width.
+       */
       .tfe-ad-slide {
         position: relative;
 
@@ -143,8 +153,11 @@
         line-height: 0;
       }
 
+      /*
+       * Link fills the slide.
+       */
       .tfe-ad-slide a {
-        display: block;
+        display: flex;
 
         width: 100%;
         height: 100%;
@@ -159,13 +172,30 @@
         text-decoration: none;
 
         line-height: 0;
+
+        align-items: center;
+        justify-content: center;
+
+        overflow: hidden;
       }
 
+      /*
+       * IMPORTANT:
+       *
+       * width: 100%
+       * height: auto
+       *
+       * This allows the actual image to preserve
+       * its own aspect ratio.
+       *
+       * No crop.
+       * No stretch.
+       */
       .tfe-ad-slide img {
         display: block;
 
         width: 100%;
-        height: 100%;
+        height: auto;
 
         max-width: 100%;
         max-height: 100%;
@@ -180,19 +210,17 @@
 
         box-sizing: border-box;
 
-        /*
-         * IMPORTANT:
-         *
-         * contain = entire image stays visible.
-         * No crop.
-         * No stretch.
-         */
         object-fit: contain;
         object-position: center center;
 
         vertical-align: top;
+
+        flex: 0 0 auto;
       }
 
+      /*
+       * DOTS
+       */
       .tfe-ad-dots {
         position: absolute;
 
@@ -241,6 +269,9 @@
         background: #1a73e8;
       }
 
+      /*
+       * AD LABEL
+       */
       .tfe-ad-label {
         position: absolute;
 
@@ -258,30 +289,31 @@
         pointer-events: none;
       }
 
+      /*
+       * Empty widget
+       */
       .tfe-ad-widget:empty {
         display: none;
       }
 
-      /* ================================================
-         TABLET
-      ================================================= */
-
+      /*
+       * TABLET
+       *
+       * Width continues to follow the host container.
+       * The 1320:300 ratio is preserved.
+       */
       @media (max-width: 1320px) {
         .tfe-ad-widget {
           width: 100%;
           max-width: 100%;
 
-          /*
-           * Keep exact banner ratio.
-           */
           aspect-ratio: 1320 / 300;
         }
       }
 
-      /* ================================================
-         MOBILE
-      ================================================= */
-
+      /*
+       * TABLET / SMALL SCREEN
+       */
       @media (max-width: 900px) {
         .tfe-ad-widget {
           width: 100%;
@@ -297,10 +329,9 @@
         }
       }
 
-      /* ================================================
-         SMALL MOBILE
-      ================================================= */
-
+      /*
+       * MOBILE
+       */
       @media (max-width: 650px) {
         .tfe-ad-widget {
           width: 100%;
@@ -327,7 +358,7 @@
     `;
 
     var style = el("style", {
-      id: "tfe-ad-widget-styles"
+      id: "tfe-ad-widget-styles",
     });
 
     style.appendChild(
@@ -355,7 +386,7 @@
           new Blob(
             [json],
             {
-              type: "application/json"
+              type: "application/json",
             }
           )
         );
@@ -370,12 +401,12 @@
       method: "POST",
 
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
 
       body: json,
 
-      keepalive: true
+      keepalive: true,
     }).catch(function () {});
   }
 
@@ -443,9 +474,9 @@
 
       headers: self.apiKey
         ? {
-            "X-API-Key": self.apiKey
+            "X-API-Key": self.apiKey,
           }
-        : {}
+        : {},
     })
       .then(function (res) {
         if (!res.ok) {
@@ -505,6 +536,9 @@
         d.desktop_height
       );
 
+    /*
+     * Fallback to TFE standard.
+     */
     if (
       !isFinite(desktopWidth) ||
       desktopWidth <= 0
@@ -521,25 +555,45 @@
         DEFAULTS.desktopHeight;
     }
 
+    /*
+     * The widget always follows the host
+     * container width.
+     */
     self.container.style.width =
       "100%";
 
     self.container.style.maxWidth =
       desktopWidth + "px";
 
-    self.container.style.height =
-      "auto";
-
-    self.container.style.aspectRatio =
-      desktopWidth +
-      " / " +
-      desktopHeight;
-
     self.container.style.boxSizing =
       "border-box";
 
     self.container.style.overflow =
       "hidden";
+
+    /*
+     * Preserve placement aspect ratio.
+     *
+     * Example:
+     *
+     * 1320 × 300
+     * 660 × 150
+     * 390 × 88.6
+     * 320 × 72.7
+     */
+    self.container.style.aspectRatio =
+      desktopWidth +
+      " / " +
+      desktopHeight;
+
+    /*
+     * Do NOT set a fixed height here.
+     *
+     * Height is automatically calculated
+     * from aspect-ratio.
+     */
+    self.container.style.height =
+      "auto";
   };
 
   /* =====================================================
@@ -621,6 +675,9 @@
 
       self.dotsWrap = null;
 
+      /*
+       * No ads.
+       */
       if (
         !self.ads.length
       ) {
@@ -631,28 +688,28 @@
       }
 
       /*
-       * Apply exact placement ratio.
+       * Apply placement ratio.
        */
       self.applySizing();
 
       /*
        * Horizontal carousel.
-       *
-       * Every slide is exactly 100%
-       * of the widget width.
        */
       var track =
         el("div", {
-          class: "tfe-ad-track"
+          class: "tfe-ad-track",
         });
 
       var dotsWrap =
         el("div", {
-          class: "tfe-ad-dots"
+          class: "tfe-ad-dots",
         });
 
       self.ads.forEach(
         function (ad, i) {
+          /*
+           * IMAGE
+           */
           var img =
             el(
               "img",
@@ -671,13 +728,25 @@
                     : "lazy",
 
                 decoding:
-                  "async"
+                  "async",
               }
             );
 
           /*
-           * Image MUST fill the banner
-           * without cropping.
+           * IMPORTANT IMAGE RULES
+           *
+           * Width follows slide.
+           * Height remains AUTO.
+           *
+           * Therefore:
+           *
+           * 1320 × 300
+           * ↓
+           * 768 × 174.5
+           * ↓
+           * 390 × 88.6
+           * ↓
+           * 320 × 72.7
            */
           img.style.display =
             "block";
@@ -686,7 +755,7 @@
             "100%";
 
           img.style.height =
-            "100%";
+            "auto";
 
           img.style.maxWidth =
             "100%";
@@ -718,6 +787,9 @@
           img.style.boxSizing =
             "border-box";
 
+          /*
+           * LINK
+           */
           var anchor =
             el(
               "a",
@@ -736,11 +808,14 @@
 
                 "aria-label":
                   ad.title ||
-                  "Advertisement"
+                  "Advertisement",
               },
               [img]
             );
 
+          /*
+           * CLICK TRACKING
+           */
           anchor.addEventListener(
             "click",
             function () {
@@ -751,18 +826,21 @@
                     ad.id,
 
                   event_type:
-                    "click"
+                    "click",
                 }
               );
             }
           );
 
+          /*
+           * SLIDE
+           */
           var slide =
             el(
               "div",
               {
                 class:
-                  "tfe-ad-slide"
+                  "tfe-ad-slide",
               },
               [anchor]
             );
@@ -772,7 +850,7 @@
           );
 
           /*
-           * Dot navigation
+           * DOT NAVIGATION
            */
           if (
             self.ads.length > 1
@@ -794,7 +872,7 @@
                     (i + 1),
 
                   type:
-                    "button"
+                    "button",
                 }
               );
 
@@ -814,10 +892,16 @@
         }
       );
 
+      /*
+       * Add carousel.
+       */
       self.container.appendChild(
         track
       );
 
+      /*
+       * Add dots.
+       */
       if (
         self.ads.length > 1
       ) {
@@ -826,17 +910,20 @@
         );
       }
 
+      /*
+       * Ad label.
+       */
       self.container.appendChild(
         el(
           "span",
           {
             class:
-              "tfe-ad-label"
+              "tfe-ad-label",
           },
           [
             document.createTextNode(
               "Ad"
-            )
+            ),
           ]
         )
       );
@@ -856,8 +943,8 @@
       self.setupResizeObserver();
 
       /*
-       * Start autoplay only
-       * when multiple ads exist.
+       * Autoplay only when
+       * multiple ads exist.
        */
       if (
         self.ads.length > 1
@@ -908,9 +995,7 @@
       self.index = i;
 
       /*
-       * Move carousel horizontally.
-       *
-       * Every slide = 100%.
+       * Move carousel.
        */
       if (
         self.track
@@ -922,7 +1007,7 @@
       }
 
       /*
-       * Update active dot.
+       * Update dots.
        */
       if (
         self.dotsWrap
@@ -1047,7 +1132,7 @@
             ad.id,
 
           event_type:
-            "impression"
+            "impression",
         }
       );
     };
@@ -1089,7 +1174,7 @@
             );
           },
           {
-            threshold: 0.5
+            threshold: 0.5,
           }
         );
 
@@ -1202,7 +1287,7 @@
 
   window.TFEAdWidget = {
     init: initAll,
-    refresh: refreshAll
+    refresh: refreshAll,
   };
 
   /* =====================================================
@@ -1222,5 +1307,4 @@
   } else {
     initAll();
   }
-
 })(window, document);
