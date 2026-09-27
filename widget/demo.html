@@ -1,36 +1,781 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>TFE Ad Widget — Local Test</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-  body{font-family:system-ui,sans-serif;max-width:1320px;margin:40px auto;padding:0 16px;}
-  h1{font-size:20px;}
-  .placeholder{background:#f4f4f4;padding:40px;text-align:center;color:#999;border-radius:8px;margin:16px 0;}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Engineering Hub — Engineering Resources & Tools</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #172033;
+      background: #f6f8fb;
+      line-height: 1.6;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    img {
+      max-width: 100%;
+      display: block;
+    }
+
+    /* ========================================
+       GLOBAL CONTAINER
+    ======================================== */
+
+    .container {
+      width: 100%;
+      max-width: 1500px;
+      margin: 0 auto;
+      padding-left: 32px;
+      padding-right: 32px;
+    }
+
+    /* ========================================
+       TOP BAR
+    ======================================== */
+
+    .topbar {
+      width: 100%;
+      background: #111827;
+      color: #d1d5db;
+      font-size: 13px;
+    }
+
+    .topbar-inner {
+      width: 100%;
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 9px 32px;
+
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+    }
+
+    /* ========================================
+       HEADER
+    ======================================== */
+
+    header {
+      width: 100%;
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-inner {
+      width: 100%;
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 18px 32px;
+
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 30px;
+    }
+
+    .logo {
+      flex-shrink: 0;
+
+      font-size: 23px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+
+      color: #111827;
+    }
+
+    .logo span {
+      color: #2563eb;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+
+      font-size: 14px;
+      font-weight: 600;
+      color: #4b5563;
+    }
+
+    nav a {
+      transition: color 0.2s ease;
+    }
+
+    nav a:hover {
+      color: #2563eb;
+    }
+
+    .header-button {
+      flex-shrink: 0;
+
+      background: #2563eb;
+      color: #ffffff;
+
+      padding: 10px 17px;
+      border-radius: 7px;
+
+      font-size: 14px;
+      font-weight: 600;
+
+      transition:
+        background 0.2s ease,
+        transform 0.2s ease;
+    }
+
+    .header-button:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    /* ========================================
+       HERO
+    ======================================== */
+
+    .hero {
+      width: 100%;
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .hero-inner {
+      width: 100%;
+      max-width: 1440px;
+      margin: 0 auto;
+
+      padding: 75px 32px 80px;
+    }
+
+    .hero-label {
+      display: inline-block;
+
+      color: #2563eb;
+      background: #eff6ff;
+
+      padding: 6px 11px;
+      border-radius: 5px;
+
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      max-width: 820px;
+
+      font-size: clamp(36px, 4vw, 56px);
+      line-height: 1.1;
+
+      letter-spacing: -1.8px;
+
+      margin-bottom: 20px;
+
+      color: #111827;
+    }
+
+    .hero p {
+      max-width: 750px;
+
+      color: #6b7280;
+      font-size: 17px;
+      line-height: 1.75;
+    }
+
+    /* ========================================
+       ADVERTISEMENT SECTION
+    ======================================== */
+
+    .ad-section {
+      width: 100%;
+      padding: 24px 0 30px;
+
+      background: #f6f8fb;
+    }
+
+    .ad-container {
+      width: 100%;
+      max-width: 1500px;
+
+      margin: 0 auto;
+
+      padding-left: 32px;
+      padding-right: 32px;
+    }
+
+    .ad-label {
+      margin-bottom: 8px;
+
+      color: #9ca3af;
+
+      font-size: 10px;
+      font-weight: 700;
+
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+    }
+
+    /*
+      TFE WIDGET CONTAINER
+
+      The actual advertisement comes from:
+      Render FastAPI + PostgreSQL
+    */
+
+    .tfe-ad-widget {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    /* ========================================
+       CONTENT
+    ======================================== */
+
+    .content {
+      width: 100%;
+      padding: 55px 0;
+      background: #f6f8fb;
+    }
+
+    .section-title {
+      margin-bottom: 28px;
+    }
+
+    .section-title h2 {
+      color: #111827;
+
+      font-size: 29px;
+      line-height: 1.25;
+
+      margin-bottom: 6px;
+    }
+
+    .section-title p {
+      color: #6b7280;
+      font-size: 15px;
+    }
+
+    /* ========================================
+       RESOURCE CARDS
+    ======================================== */
+
+    .cards {
+      display: grid;
+
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+
+      gap: 24px;
+    }
+
+    .card {
+      background: #ffffff;
+
+      border: 1px solid #e5e7eb;
+      border-radius: 11px;
+
+      overflow: hidden;
+
+      transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+
+      box-shadow:
+        0 12px 35px rgba(0, 0, 0, 0.07);
+    }
+
+    .card-image {
+      height: 190px;
+
+      background:
+        linear-gradient(
+          135deg,
+          #dbeafe,
+          #eef2ff
+        );
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      font-size: 45px;
+    }
+
+    .card-content {
+      padding: 22px;
+    }
+
+    .card-content small {
+      display: block;
+
+      color: #2563eb;
+
+      font-size: 11px;
+      font-weight: 700;
+
+      letter-spacing: 0.8px;
+
+      text-transform: uppercase;
+
+      margin-bottom: 7px;
+    }
+
+    .card-content h3 {
+      color: #111827;
+
+      font-size: 19px;
+      line-height: 1.35;
+
+      margin-bottom: 8px;
+    }
+
+    .card-content p {
+      color: #6b7280;
+
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    /* ========================================
+       FEATURE SECTION
+    ======================================== */
+
+    .lower {
+      width: 100%;
+      padding: 0 0 65px;
+
+      background: #f6f8fb;
+    }
+
+    .info-box {
+      background: #111827;
+
+      color: #ffffff;
+
+      padding: 48px;
+
+      border-radius: 13px;
+    }
+
+    .info-box h2 {
+      font-size: 28px;
+      line-height: 1.3;
+
+      margin-bottom: 12px;
+    }
+
+    .info-box p {
+      max-width: 780px;
+
+      color: #cbd5e1;
+
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    /* ========================================
+       FOOTER
+    ======================================== */
+
+    footer {
+      width: 100%;
+
+      background: #111827;
+      color: #9ca3af;
+
+      padding: 36px 0;
+
+      font-size: 13px;
+    }
+
+    .footer-inner {
+      width: 100%;
+      max-width: 1500px;
+
+      margin: 0 auto;
+
+      padding-left: 32px;
+      padding-right: 32px;
+
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      gap: 20px;
+    }
+
+    /* ========================================
+       TABLET
+    ======================================== */
+
+    @media (max-width: 1100px) {
+
+      .container,
+      .topbar-inner,
+      .header-inner,
+      .hero-inner,
+      .ad-container,
+      .footer-inner {
+        padding-left: 24px;
+        padding-right: 24px;
+      }
+
+      nav {
+        gap: 18px;
+      }
+
+      .cards {
+        gap: 18px;
+      }
+
+    }
+
+    /* ========================================
+       MOBILE
+    ======================================== */
+
+    @media (max-width: 900px) {
+
+      .topbar-inner {
+        justify-content: center;
+        text-align: center;
+      }
+
+      .topbar-inner span:last-child {
+        display: none;
+      }
+
+      .header-inner {
+        padding-top: 15px;
+        padding-bottom: 15px;
+      }
+
+      nav {
+        display: none;
+      }
+
+      .header-button {
+        display: none;
+      }
+
+      .hero-inner {
+        padding-top: 55px;
+        padding-bottom: 60px;
+      }
+
+      .hero h1 {
+        font-size: 38px;
+        letter-spacing: -1px;
+      }
+
+      .hero p {
+        font-size: 16px;
+      }
+
+      .cards {
+        grid-template-columns: 1fr;
+      }
+
+      .card-image {
+        height: 170px;
+      }
+
+      .info-box {
+        padding: 32px 25px;
+      }
+
+      .footer-inner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+    }
+
+    /* ========================================
+       SMALL MOBILE
+    ======================================== */
+
+    @media (max-width: 500px) {
+
+      .container,
+      .topbar-inner,
+      .header-inner,
+      .hero-inner,
+      .ad-container,
+      .footer-inner {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .hero-inner {
+        padding-top: 45px;
+        padding-bottom: 50px;
+      }
+
+      .hero h1 {
+        font-size: 32px;
+      }
+
+      .hero p {
+        font-size: 15px;
+      }
+
+      .content {
+        padding-top: 40px;
+      }
+
+      .section-title h2 {
+        font-size: 25px;
+      }
+
+      .info-box {
+        padding: 28px 20px;
+      }
+
+      .info-box h2 {
+        font-size: 24px;
+      }
+
+    }
+  </style>
 </head>
+
 <body>
-  <h1>ToolsForEngineers.com — Homepage (local test)</h1>
-  <div class="placeholder">Page content above the ad slot</div>
+  <div class="topbar">
+    <div class="topbar-inner">
 
-  <div class="tfe-ad-widget"
-       data-vendor="toolsforengineers"
-       data-placement="homepage"
-       data-api-key="6e70984471b24a6d9d4c5999267e9537"
-       data-api-base="http://localhost:8000">
+      <span>
+        Engineering Resources & Technical Tools
+      </span>
+
+      <span>
+        Technical • Electrical • Civil • Mechanical
+      </span>
+
+    </div>
   </div>
+  <header>
 
-  <div class="placeholder">Page content below the ad slot</div>
+    <div class="header-inner">
 
-  <!-- <h2>Hydro dashboard placement</h2>
-  <div class="tfe-ad-widget"
-       data-vendor="toolsforengineers"
-       data-placement="hydro"
-       data-api-key="ee873ca66d094078b1d93f8742cd3831"
-       data-api-base="http://localhost:8000">
-  </div> -->
+      <a href="#" class="logo">
+        Engineering<span>Hub</span>
+      </a>
 
-  <script src="./tfe-ad-widget.js"></script>
+      <nav>
+
+        <a href="#">
+          Home
+        </a>
+
+        <a href="#">
+          Engineering Tools
+        </a>
+
+        <a href="#">
+          Calculators
+        </a>
+
+        <a href="#">
+          Articles
+        </a>
+
+        <a href="#">
+          Projects
+        </a>
+
+      </nav>
+
+      <a href="#" class="header-button">
+        Explore Tools
+      </a>
+
+    </div>
+
+  </header>
+  <section class="hero">
+    <div class="hero-inner">
+      <span class="hero-label">
+        ENGINEERING PLATFORM
+      </span>
+      <h1>
+        Practical engineering tools, resources and technical knowledge.
+      </h1>
+      <p>
+        Explore engineering calculators, technical references,
+        project resources and practical tools designed for engineers
+        and technical professionals.
+      </p>
+    </div>
+  </section>
+  <section class="ad-section">
+    <div class="ad-container">
+      <div
+        class="tfe-ad-widget"
+        data-vendor="toolsforengineers"
+        data-placement="homepage"
+        data-api-key="2180328d5b904b0eba5c60705af985ae"
+        data-api-base="https://tfe-ads-backend.onrender.com">
+      </div>
+    </div>
+  </section>
+  <main class="content">
+    <div class="container">
+      <div class="section-title">
+        <h2>
+          Engineering Resources
+        </h2>
+        <p>
+          Explore useful resources for everyday engineering work.
+        </p>
+      </div>
+      <div class="cards">
+        <article class="card">
+          <div class="card-image">
+            ⚡
+          </div>
+          <div class="card-content">
+            <small>
+              Electrical
+            </small>
+            <h3>
+              Electrical Engineering Tools
+            </h3>
+            <p>
+              Voltage, current, power, transformer and
+              electrical calculation resources.
+            </p>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-image">
+            🏗️
+          </div>
+          <div class="card-content">
+            <small>
+              Civil
+            </small>
+            <h3>
+              Construction Calculators
+            </h3>
+
+            <p>
+              Practical calculators and references for
+              construction and structural engineering.
+            </p>
+
+          </div>
+
+        </article>
+
+
+        <!-- MECHANICAL -->
+
+        <article class="card">
+
+          <div class="card-image">
+            ⚙️
+          </div>
+
+          <div class="card-content">
+
+            <small>
+              Mechanical
+            </small>
+
+            <h3>
+              Mechanical Resources
+            </h3>
+
+            <p>
+              Technical resources covering mechanical
+              systems, machines and engineering concepts.
+            </p>
+
+          </div>
+
+        </article>
+
+      </div>
+
+    </div>
+
+  </main>
+
+
+  <!-- ========================================
+       INFORMATION SECTION
+  ======================================== -->
+
+  <section class="lower">
+
+    <div class="container">
+
+      <div class="info-box">
+
+        <h2>
+          Built for practical engineering work.
+        </h2>
+
+        <p>
+          Find technical information, engineering tools and
+          resources that help you solve everyday engineering
+          problems more efficiently.
+        </p>
+
+      </div>
+
+    </div>
+
+  </section>
+  <footer>
+
+    <div class="footer-inner">
+
+      <span>
+        © 2026 EngineeringHub
+      </span>
+
+      <span>
+        Engineering Resources • Technical Tools • Knowledge
+      </span>
+
+    </div>
+
+  </footer>
+  <!-- ========================================
+       RENDER-HOSTED TFE AD WIDGET
+  ======================================== -->
+
+  <script
+    src="https://tfe-ads-backend.onrender.com/widget/tfe-ad-widget.js"
+    async>
+  </script>
+
 </body>
 </html>
