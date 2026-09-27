@@ -86,140 +86,75 @@
       .tfe-ad-widget {
         position: relative;
         display: block;
-
         width: 100%;
         max-width: 1320px;
-
         height: auto;
         min-height: 0;
-
         margin: 0 auto;
         padding: 0;
-
         box-sizing: border-box;
-
         background: transparent;
-
         line-height: 0;
-
         overflow: hidden;
+        border-radius: 8px;
       }
 
-      /*
-       * Carousel track
-       *
-       * No fixed height.
-       */
       .tfe-ad-track {
         display: flex;
-
         width: 100%;
         height: auto;
-
         margin: 0;
         padding: 0;
-
         box-sizing: border-box;
-
         line-height: 0;
-
-        transition:
-          transform 600ms ease-in-out;
-
+        transition: transform 600ms ease-in-out;
         will-change: transform;
       }
 
-      /*
-       * Each slide has the width of the widget.
-       *
-       * Height is NOT forced.
-       */
       .tfe-ad-slide {
         position: relative;
-
         flex: 0 0 100%;
-
         width: 100%;
         height: auto;
-
         min-width: 0;
         min-height: 0;
-
         margin: 0;
         padding: 0;
-
         box-sizing: border-box;
-
         overflow: hidden;
-
         line-height: 0;
+        border-radius: 8px;
       }
 
-      /*
-       * Link follows image size.
-       *
-       * IMPORTANT:
-       * Do not force height: 100%.
-       */
       .tfe-ad-slide a {
         display: block;
-
         width: 100%;
         height: auto;
-
         max-width: 100%;
-
         margin: 0;
         padding: 0;
-
         box-sizing: border-box;
-
         text-decoration: none;
-
         line-height: 0;
-
         overflow: hidden;
+        border-radius: 8px;
       }
 
-      /*
-       * IMAGE
-       *
-       * Width shrinks with available space.
-       * Height is calculated automatically from
-       * the image's natural aspect ratio.
-       *
-       * Example:
-       *
-       * 1320 × 300
-       * 1000 × 227
-       * 768  × 175
-       * 390  × 89
-       * 320  × 73
-       *
-       * No crop.
-       * No stretch.
-       */
       .tfe-ad-slide img {
         display: block;
-
         width: 100%;
         height: auto;
-
         max-width: 100%;
         min-width: 0;
-
+        min-height: 0;
         margin: 0;
         padding: 0;
         border: 0;
-
+        border-radius: 8px;
         box-sizing: border-box;
-
         object-fit: contain;
         object-position: center center;
-
         vertical-align: top;
-
-        flex: none;
       }
 
       /*
