@@ -73,15 +73,18 @@
    * CSS
    * -------------------------------------------------------
    *
-   * Important responsive rules:
+   * Responsive behavior:
    *
-   * - Widget width is always 100% of available space.
-   * - max-width comes from placement desktop_width.
-   * - Images use width:100% + height:auto.
-   * - No fixed height is applied.
-   * - No object-fit:cover.
-   * - Therefore the creative keeps its original ratio.
+   * - Widget uses 100% available width.
+   * - Desktop max-width comes from placement.
+   * - Image width follows container width.
+   * - Image height remains automatic.
+   * - Original image aspect ratio is preserved.
+   * - No fixed image height.
+   * - No object-fit: cover.
+   * - No cropping.
    */
+
   function injectStylesOnce() {
     if (qs("#tfe-ad-widget-styles")) {
       return;
@@ -93,9 +96,10 @@
       "display:block;" +
       "width:100%;" +
       "max-width:1320px;" +
+      "height:auto;" +
       "margin:0 auto;" +
       "padding:0;" +
-      "overflow:hidden;" +
+      "overflow:visible;" +
       "box-sizing:border-box;" +
       "background:transparent;" +
       "line-height:0;" +
@@ -104,6 +108,7 @@
       ".tfe-ad-track{" +
       "display:flex;" +
       "width:100%;" +
+      "height:auto;" +
       "margin:0;" +
       "padding:0;" +
       "transition:transform " +
@@ -117,11 +122,12 @@
       "flex:0 0 100%;" +
       "width:100%;" +
       "min-width:0;" +
+      "height:auto;" +
       "margin:0;" +
       "padding:0;" +
       "position:relative;" +
       "box-sizing:border-box;" +
-      "overflow:hidden;" +
+      "overflow:visible;" +
       "line-height:0;" +
       "}" +
 
@@ -129,6 +135,7 @@
       "display:block;" +
       "width:100%;" +
       "max-width:100%;" +
+      "height:auto;" +
       "margin:0;" +
       "padding:0;" +
       "text-decoration:none;" +
@@ -139,14 +146,15 @@
       ".tfe-ad-slide img{" +
       "display:block;" +
       "width:100%;" +
-      "height:auto;" +
       "max-width:100%;" +
+      "height:auto;" +
       "min-width:0;" +
       "margin:0;" +
       "padding:0;" +
       "border:0;" +
       "box-sizing:border-box;" +
-      "object-fit:initial;" +
+      "object-fit:contain;" +
+      "object-position:center;" +
       "}" +
 
       ".tfe-ad-dots{" +
@@ -208,8 +216,31 @@
       ".tfe-ad-widget{" +
       "width:100%;" +
       "max-width:100%;" +
+      "height:auto;" +
       "border-radius:6px;" +
       "}" +
+
+      ".tfe-ad-track{" +
+      "width:100%;" +
+      "height:auto;" +
+      "}" +
+
+      ".tfe-ad-slide{" +
+      "width:100%;" +
+      "height:auto;" +
+      "}" +
+
+      ".tfe-ad-slide a{" +
+      "width:100%;" +
+      "height:auto;" +
+      "}" +
+
+      ".tfe-ad-slide img{" +
+      "width:100%;" +
+      "height:auto;" +
+      "max-width:100%;" +
+      "}" +
+
       ".tfe-ad-dots{" +
       "bottom:6px;" +
       "}" +
@@ -219,12 +250,36 @@
       ".tfe-ad-widget{" +
       "width:100%;" +
       "max-width:100%;" +
+      "height:auto;" +
       "border-radius:4px;" +
       "}" +
+
+      ".tfe-ad-track{" +
+      "width:100%;" +
+      "height:auto;" +
+      "}" +
+
+      ".tfe-ad-slide{" +
+      "width:100%;" +
+      "height:auto;" +
+      "}" +
+
+      ".tfe-ad-slide a{" +
+      "width:100%;" +
+      "height:auto;" +
+      "}" +
+
+      ".tfe-ad-slide img{" +
+      "width:100%;" +
+      "height:auto;" +
+      "max-width:100%;" +
+      "}" +
+
       ".tfe-ad-dots{" +
       "bottom:5px;" +
       "gap:5px;" +
       "}" +
+
       ".tfe-ad-dot{" +
       "width:6px;" +
       "height:6px;" +
@@ -237,9 +292,7 @@
       id: "tfe-ad-widget-styles",
     });
 
-    style.appendChild(
-      document.createTextNode(css)
-    );
+    style.appendChild(document.createTextNode(css));
 
     document.head.appendChild(style);
   }
@@ -249,6 +302,7 @@
    * Tracking
    * -------------------------------------------------------
    */
+
   function sendBeacon(apiBase, body) {
     var url =
       apiBase.replace(/\/$/, "") +
@@ -286,6 +340,7 @@
    * Ad Slot
    * -------------------------------------------------------
    */
+
   function AdSlot(container) {
     this.container = container;
 
@@ -309,21 +364,13 @@
       ) || DEFAULTS.interval;
 
     this.index = 0;
-
     this.ads = [];
-
     this.impressed = {};
-
     this.timer = null;
-
     this.track = null;
-
     this.dotsWrap = null;
-
     this.observer = null;
-
     this.resizeObserver = null;
-
     this.dimensions = {};
   }
 
@@ -332,6 +379,7 @@
    * Fetch ads
    * -------------------------------------------------------
    */
+
   AdSlot.prototype.fetchAds = function () {
     var self = this;
 
@@ -361,7 +409,6 @@
 
         return res.json();
       })
-
       .then(function (data) {
         self.ads = Array.isArray(data.ads)
           ? data.ads
@@ -372,7 +419,6 @@
 
         return data;
       })
-
       .catch(function (err) {
         console.warn(
           "[tfe-ad-widget]",
@@ -380,7 +426,6 @@
         );
 
         self.ads = [];
-
         self.dimensions = {};
 
         return null;
@@ -398,15 +443,16 @@
    *
    * desktop_width = 1320
    *
-   * Parent/container width:
+   * Container:
    *
    * 1320px -> image 1320px wide
    * 1000px -> image 1000px wide
    * 768px  -> image 768px wide
    * 390px  -> image 390px wide
    *
-   * Height is NEVER forced.
+   * Height is always automatic.
    */
+
   AdSlot.prototype.applySizing = function () {
     var d = this.dimensions || {};
 
@@ -428,13 +474,20 @@
 
     this.container.style.width = "100%";
 
+    /*
+     * Important:
+     * Never force a fixed height.
+     */
     this.container.style.height = "auto";
 
     this.container.style.boxSizing =
       "border-box";
 
+    /*
+     * Do not hide a resized image.
+     */
     this.container.style.overflow =
-      "hidden";
+      "visible";
   };
 
   /*
@@ -442,16 +495,10 @@
    * Resize handling
    * -------------------------------------------------------
    *
-   * The widget itself does not force an image height.
-   *
-   * Browser automatically calculates:
-   *
-   * rendered height =
-   * rendered width / original aspect ratio
-   *
-   * ResizeObserver is used to force a small layout
-   * recalculation when the parent/container changes.
+   * The image height is calculated automatically
+   * from its natural aspect ratio.
    */
+
   AdSlot.prototype.setupResizeObserver =
     function () {
       var self = this;
@@ -489,6 +536,7 @@
    * Render
    * -------------------------------------------------------
    */
+
   AdSlot.prototype.render = function () {
     var self = this;
 
@@ -533,43 +581,70 @@
     self.ads.forEach(function (ad, i) {
       var img = el("img", {
         src: ad.image_url,
+
         alt:
           ad.alt_text ||
           ad.title ||
           "Advertisement",
+
         loading:
           i === 0
             ? "eager"
             : "lazy",
+
         decoding: "async",
       });
 
       /*
        * Explicit responsive image rules.
        *
-       * Width follows slide/container.
+       * Width follows container.
        * Height remains automatic.
+       * Aspect ratio remains untouched.
+       * Image is never cropped.
        */
+
       img.style.display = "block";
+
       img.style.width = "100%";
+
       img.style.maxWidth = "100%";
+
       img.style.height = "auto";
+
       img.style.minWidth = "0";
+
       img.style.margin = "0";
+
       img.style.padding = "0";
+
       img.style.border = "0";
-      img.style.objectFit = "initial";
+
+      img.style.objectFit = "contain";
+
+      img.style.objectPosition = "center";
+
       img.style.boxSizing = "border-box";
+
+      /*
+       * Prevent browser/host CSS from forcing
+       * a fixed image height.
+       */
+      img.removeAttribute("width");
+      img.removeAttribute("height");
 
       var anchor = el(
         "a",
         {
           href: ad.target_url || "#",
+
           target: ad.open_in_new_tab
             ? "_blank"
             : "_self",
+
           rel:
             "noopener noreferrer sponsored",
+
           "aria-label":
             ad.title ||
             "Advertisement",
@@ -609,9 +684,11 @@
               (i === 0
                 ? " active"
                 : ""),
+
             "aria-label":
               "Go to ad " +
               (i + 1),
+
             type: "button",
           }
         );
@@ -666,6 +743,7 @@
      * Start autoplay only when there are
      * multiple advertisements.
      */
+
     if (self.ads.length > 1) {
       self.startAutoplay();
 
@@ -690,6 +768,7 @@
    * Go to ad
    * -------------------------------------------------------
    */
+
   AdSlot.prototype.goTo = function (i) {
     if (!this.ads.length) {
       return;
@@ -724,6 +803,7 @@
    * Next ad
    * -------------------------------------------------------
    */
+
   AdSlot.prototype.next = function () {
     if (!this.ads.length) {
       return;
@@ -741,6 +821,7 @@
    * Start autoplay
    * -------------------------------------------------------
    */
+
   AdSlot.prototype.startAutoplay =
     function () {
       var self = this;
@@ -765,6 +846,7 @@
    * Stop autoplay
    * -------------------------------------------------------
    */
+
   AdSlot.prototype.stopAutoplay =
     function () {
       if (this.timer) {
@@ -781,6 +863,7 @@
    * Restart autoplay
    * -------------------------------------------------------
    */
+
   AdSlot.prototype.restartAutoplay =
     function () {
       if (this.ads.length > 1) {
@@ -793,6 +876,7 @@
    * Impression tracking
    * -------------------------------------------------------
    */
+
   AdSlot.prototype.markImpression =
     function (i) {
       var ad = this.ads[i];
@@ -820,6 +904,7 @@
    * Visibility tracking
    * -------------------------------------------------------
    */
+
   AdSlot.prototype.observeVisibility =
     function () {
       var self = this;
@@ -869,6 +954,7 @@
    * Initialize slot
    * -------------------------------------------------------
    */
+
   AdSlot.prototype.init = function () {
     var self = this;
 
@@ -884,6 +970,7 @@
    * Initialize all widgets
    * -------------------------------------------------------
    */
+
   function initAll(root) {
     injectStylesOnce();
 
@@ -932,6 +1019,7 @@
    * Refresh all initialized widgets
    * -------------------------------------------------------
    */
+
   function refreshAll(root) {
     var containers = (
       root || document
@@ -958,6 +1046,7 @@
    * Public API
    * -------------------------------------------------------
    */
+
   window.TFEAdWidget = {
     init: initAll,
     refresh: refreshAll,
@@ -968,6 +1057,7 @@
    * Auto initialize
    * -------------------------------------------------------
    */
+
   if (
     document.readyState ===
     "loading"
