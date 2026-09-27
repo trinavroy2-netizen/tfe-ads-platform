@@ -4,7 +4,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from ..config import settings
 from ..database import Base, engine, SessionLocal
-from . import models
+from .. import models
 from ..security import hash_password
 from ..routers import auth, vendors, placements, ads, upload, public
 
