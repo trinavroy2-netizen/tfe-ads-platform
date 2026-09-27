@@ -1,8 +1,6 @@
-from urllib.parse import urlparse
-
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.base import BaseHTTPMiddleware
 
 from .config import settings
 from .database import Base, engine, SessionLocal
@@ -29,231 +27,38 @@ app = FastAPI(
 
 
 # =========================================================
-# DYNAMIC VENDOR CORS
+# CORS
 # =========================================================
-
-def normalize_origin(origin: str | None) -> str:
-    """
-    Normalize a browser Origin value.
-
-    Examples:
-        https://example.com/    -> https://example.com
-        https://www.example.com -> https://www.example.com
-        http://localhost:5500   -> http://localhost:5500
-    """
-
-    if not origin:
-        return ""
-
-    origin = origin.strip().rstrip("/")
-
-    try:
-        parsed = urlparse(origin)
-
-        if parsed.scheme not in {"http", "https"}:
-            return ""
-
-        if not parsed.netloc:
-            return ""
-
-        return (
-            f"{parsed.scheme.lower()}://"
-            f"{parsed.netloc.lower()}"
-        )
-
-    except Exception:
-        return ""
-
-
-def get_vendor_origins(db) -> set[str]:
-    """
-    Build allowed CORS origins dynamically from active vendors.
-
-    Supported database values:
-
-        example.com
-        www.example.com
-
-    or:
-
-        https://example.com
-        http://localhost:5500
-
-    Multiple domains can be comma-separated.
-    """
-
-    origins: set[str] = set()
-
-    vendors = (
-        db.query(models.Vendor)
-        .filter(
-            models.Vendor.is_active == True  # noqa: E712
-        )
-        .all()
-    )
-
-    for vendor in vendors:
-
-        raw_domains = vendor.allowed_domains or ""
-
-        for item in raw_domains.split(","):
-
-            value = item.strip()
-
-            if not value:
-                continue
-
-            # -------------------------------------------------
-            # Domain-only format
-            # -------------------------------------------------
-            #
-            # Example:
-            # example.com
-            #
-            # Automatically allow:
-            # https://example.com
-            # http://example.com
-            #
-
-            if "://" not in value:
-
-                value = value.rstrip("/")
-
-                if value:
-                    origins.add(
-                        f"https://{value.lower()}"
-                    )
-
-                    origins.add(
-                        f"http://{value.lower()}"
-                    )
-
-                continue
-
-            # -------------------------------------------------
-            # Full origin format
-            # -------------------------------------------------
-
-            normalized = normalize_origin(value)
-
-            if normalized:
-                origins.add(normalized)
-
-    return origins
-
-
-class DynamicVendorCORSMiddleware(BaseHTTPMiddleware):
-    """
-    Dynamic CORS middleware.
-
-    Allowed origins are loaded from active vendors'
-    allowed_domains values in the database.
-
-    No Render CORS_ORIGINS update is required when
-    vendor domains are changed through the dashboard.
-    """
-
-    async def dispatch(self, request, call_next):
-
-        # -----------------------------------------------------
-        # Browser Origin
-        # -----------------------------------------------------
-
-        origin = normalize_origin(
-            request.headers.get("origin")
-        )
-
-        # -----------------------------------------------------
-        # Non-browser request
-        # -----------------------------------------------------
-
-        if not origin:
-            return await call_next(request)
-
-        # -----------------------------------------------------
-        # Load active vendor domains
-        # -----------------------------------------------------
-
-        db = SessionLocal()
-
-        try:
-            allowed_origins = get_vendor_origins(db)
-        finally:
-            db.close()
-
-        # -----------------------------------------------------
-        # OPTIONS / Preflight
-        # -----------------------------------------------------
-
-        if request.method == "OPTIONS":
-
-            # Unknown origin
-            if origin not in allowed_origins:
-                return await call_next(request)
-
-            response = await call_next(request)
-
-            response.headers[
-                "Access-Control-Allow-Origin"
-            ] = origin
-
-            response.headers[
-                "Access-Control-Allow-Credentials"
-            ] = "true"
-
-            response.headers[
-                "Access-Control-Allow-Methods"
-            ] = (
-                "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-            )
-
-            requested_headers = request.headers.get(
-                "access-control-request-headers"
-            )
-
-            if requested_headers:
-
-                response.headers[
-                    "Access-Control-Allow-Headers"
-                ] = requested_headers
-
-            else:
-
-                response.headers[
-                    "Access-Control-Allow-Headers"
-                ] = "*"
-
-            response.headers["Vary"] = "Origin"
-
-            return response
-
-        # -----------------------------------------------------
-        # Normal browser request
-        # -----------------------------------------------------
-
-        response = await call_next(request)
-
-        if origin in allowed_origins:
-
-            response.headers[
-                "Access-Control-Allow-Origin"
-            ] = origin
-
-            response.headers[
-                "Access-Control-Allow-Credentials"
-            ] = "true"
-
-            response.headers["Vary"] = "Origin"
-
-        return response
-
-
-# =========================================================
-# ADD DYNAMIC CORS MIDDLEWARE
+#
+# CORS is controlled through the CORS_ORIGINS environment
+# variable from the backend configuration.
+#
+# Example:
+#
+# CORS_ORIGINS=https://tfe-ads-dashboard.onrender.com
+#
+# Multiple origins can be configured depending on how
+# settings.cors_origins is parsed in config.py.
+#
 # =========================================================
 
 app.add_middleware(
-    DynamicVendorCORSMiddleware
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=[
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS",
+    ],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-API-Key",
+    ],
 )
 
 
