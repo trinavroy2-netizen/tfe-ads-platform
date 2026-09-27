@@ -16,21 +16,6 @@
  * - Click tracking
  * - IntersectionObserver visibility tracking
  * - ResizeObserver responsive recalculation
- *
- * Example:
- *
- * <div
- *   class="tfe-ad-widget"
- *   data-vendor="toolsforengineers"
- *   data-placement="homepage"
- *   data-api-key="YOUR_VENDOR_API_KEY"
- *   data-api-base="https://ads-api.mahavirshree.com">
- * </div>
- *
- * <script
- *   src="https://ads-api.mahavirshree.com/widget/tfe-ad-widget.js"
- *   async>
- * </script>
  */
 
 (function (window, document) {
@@ -39,8 +24,12 @@
   var DEFAULTS = {
     apiBase: "http://localhost:8000",
     interval: 4000,
-    transition: 600,
+    transition: 600
   };
+
+  /* =====================================================
+     HELPERS
+  ===================================================== */
 
   function qs(sel, ctx) {
     return (ctx || document).querySelector(sel);
@@ -50,191 +39,248 @@
     var e = document.createElement(tag);
 
     if (attrs) {
-      Object.keys(attrs).forEach(function (k) {
-        if (k === "class") {
-          e.className = attrs[k];
-        } else if (k === "style") {
-          e.style.cssText = attrs[k];
+      Object.keys(attrs).forEach(function (key) {
+        if (key === "class") {
+          e.className = attrs[key];
+        } else if (key === "style") {
+          e.style.cssText = attrs[key];
         } else {
-          e.setAttribute(k, attrs[k]);
+          e.setAttribute(key, attrs[key]);
         }
       });
     }
 
-    (children || []).forEach(function (c) {
-      e.appendChild(c);
+    (children || []).forEach(function (child) {
+      e.appendChild(child);
     });
 
     return e;
   }
 
-  /*
-   * -------------------------------------------------------
-   * CSS
-   * -------------------------------------------------------
-   *
-   * Important responsive rules:
-   *
-   * - Widget width is always 100% of available space.
-   * - max-width comes from placement desktop_width.
-   * - Images use width:100% + height:auto.
-   * - No fixed height is applied.
-   * - No object-fit:cover.
-   * - Therefore the creative keeps its original ratio.
-   */
+  function cleanUrl(url) {
+    return String(url || "").replace(/\/+$/, "");
+  }
+
+  /* =====================================================
+     CSS
+  ===================================================== */
+
   function injectStylesOnce() {
     if (qs("#tfe-ad-widget-styles")) {
       return;
     }
 
-    var css =
-      ".tfe-ad-widget{" +
-      "position:relative;" +
-      "display:block;" +
-      "width:100%;" +
-      "max-width:1320px;" +
-      "margin:0 auto;" +
-      "padding:0;" +
-      "overflow:hidden;" +
-      "box-sizing:border-box;" +
-      "background:transparent;" +
-      "line-height:0;" +
-      "}" +
+    var css = `
+      .tfe-ad-widget {
+        position: relative;
+        display: block;
+        width: 100%;
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 0;
+        box-sizing: border-box;
+        background: transparent;
+        line-height: 0;
+        overflow: hidden;
+      }
 
-      ".tfe-ad-track{" +
-      "display:flex;" +
-      "width:100%;" +
-      "margin:0;" +
-      "padding:0;" +
-      "transition:transform " +
-      DEFAULTS.transition +
-      "ms ease-in-out;" +
-      "will-change:transform;" +
-      "box-sizing:border-box;" +
-      "}" +
+      .tfe-ad-track {
+        position: relative;
+        display: block;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        line-height: 0;
+      }
 
-      ".tfe-ad-slide{" +
-      "flex:0 0 100%;" +
-      "width:100%;" +
-      "min-width:0;" +
-      "margin:0;" +
-      "padding:0;" +
-      "position:relative;" +
-      "box-sizing:border-box;" +
-      "overflow:hidden;" +
-      "line-height:0;" +
-      "}" +
+      .tfe-ad-slide {
+        position: absolute;
+        top: 0;
+        left: 0;
 
-      ".tfe-ad-slide a{" +
-      "display:block;" +
-      "width:100%;" +
-      "max-width:100%;" +
-      "margin:0;" +
-      "padding:0;" +
-      "text-decoration:none;" +
-      "line-height:0;" +
-      "box-sizing:border-box;" +
-      "}" +
+        display: block;
 
-      ".tfe-ad-slide img{" +
-      "display:block;" +
-      "width:100%;" +
-      "height:auto;" +
-      "max-width:100%;" +
-      "min-width:0;" +
-      "margin:0;" +
-      "padding:0;" +
-      "border:0;" +
-      "box-sizing:border-box;" +
-      "object-fit:initial;" +
-      "}" +
+        width: 100%;
+        height: 100%;
 
-      ".tfe-ad-dots{" +
-      "position:absolute;" +
-      "bottom:8px;" +
-      "left:0;" +
-      "right:0;" +
-      "display:flex;" +
-      "justify-content:center;" +
-      "align-items:center;" +
-      "gap:6px;" +
-      "z-index:5;" +
-      "pointer-events:none;" +
-      "line-height:normal;" +
-      "}" +
+        margin: 0;
+        padding: 0;
 
-      ".tfe-ad-dot{" +
-      "width:7px;" +
-      "height:7px;" +
-      "min-width:7px;" +
-      "min-height:7px;" +
-      "border-radius:50%;" +
-      "background:rgba(255,255,255,.65);" +
-      "border:1px solid rgba(0,0,0,.15);" +
-      "padding:0;" +
-      "margin:0;" +
-      "cursor:pointer;" +
-      "pointer-events:auto;" +
-      "box-sizing:border-box;" +
-      "}" +
+        box-sizing: border-box;
 
-      ".tfe-ad-dot.active{" +
-      "background:#1a73e8;" +
-      "}" +
+        opacity: 0;
+        visibility: hidden;
 
-      ".tfe-ad-label{" +
-      "position:absolute;" +
-      "top:4px;" +
-      "right:6px;" +
-      "font:10px/1 sans-serif;" +
-      "color:rgba(0,0,0,.35);" +
-      "z-index:6;" +
-      "letter-spacing:.05em;" +
-      "pointer-events:none;" +
-      "}" +
+        transition:
+          opacity 600ms ease-in-out,
+          visibility 600ms ease-in-out;
 
-      ".tfe-ad-widget:empty{" +
-      "display:none;" +
-      "}" +
+        line-height: 0;
+      }
 
-      "@media(max-width:1320px){" +
-      ".tfe-ad-widget{" +
-      "width:100%;" +
-      "max-width:100%;" +
-      "}" +
-      "}" +
+      .tfe-ad-slide.active {
+        position: relative;
 
-      "@media(max-width:900px){" +
-      ".tfe-ad-widget{" +
-      "width:100%;" +
-      "max-width:100%;" +
-      "border-radius:6px;" +
-      "}" +
-      ".tfe-ad-dots{" +
-      "bottom:6px;" +
-      "}" +
-      "}" +
+        opacity: 1;
+        visibility: visible;
 
-      "@media(max-width:650px){" +
-      ".tfe-ad-widget{" +
-      "width:100%;" +
-      "max-width:100%;" +
-      "border-radius:4px;" +
-      "}" +
-      ".tfe-ad-dots{" +
-      "bottom:5px;" +
-      "gap:5px;" +
-      "}" +
-      ".tfe-ad-dot{" +
-      "width:6px;" +
-      "height:6px;" +
-      "min-width:6px;" +
-      "min-height:6px;" +
-      "}" +
-      "}";
+        z-index: 2;
+      }
+
+      .tfe-ad-slide a {
+        display: block;
+
+        width: 100%;
+        height: auto;
+
+        max-width: 100%;
+
+        margin: 0;
+        padding: 0;
+
+        box-sizing: border-box;
+
+        text-decoration: none;
+
+        line-height: 0;
+      }
+
+      .tfe-ad-slide img {
+        display: block;
+
+        width: 100%;
+        max-width: 100%;
+
+        height: auto;
+
+        min-width: 0;
+        min-height: 0;
+
+        margin: 0;
+        padding: 0;
+
+        border: 0;
+
+        box-sizing: border-box;
+
+        object-fit: contain;
+        object-position: center;
+
+        vertical-align: top;
+      }
+
+      .tfe-ad-dots {
+        position: absolute;
+
+        left: 0;
+        right: 0;
+        bottom: 8px;
+
+        display: flex;
+
+        justify-content: center;
+        align-items: center;
+
+        gap: 6px;
+
+        z-index: 10;
+
+        pointer-events: none;
+
+        line-height: normal;
+      }
+
+      .tfe-ad-dot {
+        width: 7px;
+        height: 7px;
+
+        min-width: 7px;
+        min-height: 7px;
+
+        padding: 0;
+        margin: 0;
+
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        border-radius: 50%;
+
+        background: rgba(255, 255, 255, 0.65);
+
+        cursor: pointer;
+
+        pointer-events: auto;
+
+        box-sizing: border-box;
+      }
+
+      .tfe-ad-dot.active {
+        background: #1a73e8;
+      }
+
+      .tfe-ad-label {
+        position: absolute;
+
+        top: 4px;
+        right: 6px;
+
+        z-index: 11;
+
+        font: 10px/1 sans-serif;
+
+        color: rgba(0, 0, 0, 0.35);
+
+        letter-spacing: 0.05em;
+
+        pointer-events: none;
+      }
+
+      .tfe-ad-widget:empty {
+        display: none;
+      }
+
+      @media (max-width: 1320px) {
+        .tfe-ad-widget {
+          width: 100%;
+          max-width: 100%;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .tfe-ad-widget {
+          width: 100%;
+          max-width: 100%;
+          border-radius: 6px;
+        }
+
+        .tfe-ad-dots {
+          bottom: 6px;
+        }
+      }
+
+      @media (max-width: 650px) {
+        .tfe-ad-widget {
+          width: 100%;
+          max-width: 100%;
+          border-radius: 4px;
+        }
+
+        .tfe-ad-dots {
+          bottom: 5px;
+          gap: 5px;
+        }
+
+        .tfe-ad-dot {
+          width: 6px;
+          height: 6px;
+
+          min-width: 6px;
+          min-height: 6px;
+        }
+      }
+    `;
 
     var style = el("style", {
-      id: "tfe-ad-widget-styles",
+      id: "tfe-ad-widget-styles"
     });
 
     style.appendChild(
@@ -244,14 +290,13 @@
     document.head.appendChild(style);
   }
 
-  /*
-   * -------------------------------------------------------
-   * Tracking
-   * -------------------------------------------------------
-   */
+  /* =====================================================
+     TRACKING
+  ===================================================== */
+
   function sendBeacon(apiBase, body) {
     var url =
-      apiBase.replace(/\/$/, "") +
+      cleanUrl(apiBase) +
       "/api/public/track";
 
     var json = JSON.stringify(body);
@@ -260,32 +305,34 @@
       if (navigator.sendBeacon) {
         navigator.sendBeacon(
           url,
-          new Blob([json], {
-            type: "application/json",
-          })
+          new Blob(
+            [json],
+            {
+              type: "application/json"
+            }
+          )
         );
 
         return;
       }
     } catch (e) {
-      /* fall through to fetch */
+      /* fallback to fetch */
     }
 
     fetch(url, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
       },
       body: json,
-      keepalive: true,
+      keepalive: true
     }).catch(function () {});
   }
 
-  /*
-   * -------------------------------------------------------
-   * Ad Slot
-   * -------------------------------------------------------
-   */
+  /* =====================================================
+     AD SLOT
+  ===================================================== */
+
   function AdSlot(container) {
     this.container = container;
 
@@ -325,18 +372,19 @@
     this.resizeObserver = null;
 
     this.dimensions = {};
+
+    this.slideRatios = [];
   }
 
-  /*
-   * -------------------------------------------------------
-   * Fetch ads
-   * -------------------------------------------------------
-   */
+  /* =====================================================
+     FETCH ADS
+  ===================================================== */
+
   AdSlot.prototype.fetchAds = function () {
     var self = this;
 
     var url =
-      self.apiBase.replace(/\/$/, "") +
+      cleanUrl(self.apiBase) +
       "/api/public/ads?vendor=" +
       encodeURIComponent(self.vendor) +
       "&placement=" +
@@ -344,11 +392,12 @@
 
     return fetch(url, {
       method: "GET",
+
       headers: self.apiKey
         ? {
-            "X-API-Key": self.apiKey,
+            "X-API-Key": self.apiKey
           }
-        : {},
+        : {}
     })
       .then(function (res) {
         if (!res.ok) {
@@ -363,9 +412,10 @@
       })
 
       .then(function (data) {
-        self.ads = Array.isArray(data.ads)
-          ? data.ads
-          : [];
+        self.ads =
+          Array.isArray(data.ads)
+            ? data.ads
+            : [];
 
         self.dimensions =
           data.dimensions || {};
@@ -387,71 +437,195 @@
       });
   };
 
-  /*
-   * -------------------------------------------------------
-   * Apply responsive sizing
-   * -------------------------------------------------------
-   *
-   * Desktop width comes from placement.
-   *
-   * Example:
-   *
-   * desktop_width = 1320
-   *
-   * Parent/container width:
-   *
-   * 1320px -> image 1320px wide
-   * 1000px -> image 1000px wide
-   * 768px  -> image 768px wide
-   * 390px  -> image 390px wide
-   *
-   * Height is NEVER forced.
-   */
-  AdSlot.prototype.applySizing = function () {
+  /* =====================================================
+     GET DEFAULT ASPECT RATIO
+     
+     Placement is normally 1320 x 300.
+     
+     ratio = width / height
+  ===================================================== */
+
+  AdSlot.prototype.getDefaultRatio = function () {
     var d = this.dimensions || {};
 
-    var desktopWidth = parseInt(
-      d.desktop_width,
-      10
+    var width = parseFloat(
+      d.desktop_width
+    );
+
+    var height = parseFloat(
+      d.desktop_height
     );
 
     if (
-      !isNaN(desktopWidth) &&
-      desktopWidth > 0
+      width > 0 &&
+      height > 0
     ) {
-      this.container.style.maxWidth =
-        desktopWidth + "px";
-    } else {
-      this.container.style.maxWidth =
-        "1320px";
+      return width / height;
     }
 
-    this.container.style.width = "100%";
-
-    this.container.style.height = "auto";
-
-    this.container.style.boxSizing =
-      "border-box";
-
-    this.container.style.overflow =
-      "hidden";
+    return 1320 / 300;
   };
 
-  /*
-   * -------------------------------------------------------
-   * Resize handling
-   * -------------------------------------------------------
-   *
-   * The widget itself does not force an image height.
-   *
-   * Browser automatically calculates:
-   *
-   * rendered height =
-   * rendered width / original aspect ratio
-   *
-   * ResizeObserver is used to force a small layout
-   * recalculation when the parent/container changes.
-   */
+  /* =====================================================
+     APPLY RESPONSIVE SIZE
+     
+     IMPORTANT:
+     
+     We never set a fixed height based on:
+       mobile_height
+       tablet_height
+       desktop_height
+     
+     Instead the widget follows the original
+     advertisement aspect ratio.
+  ===================================================== */
+
+  AdSlot.prototype.applySizing = function () {
+    var self = this;
+
+    var d = self.dimensions || {};
+
+    var desktopWidth =
+      parseFloat(d.desktop_width);
+
+    if (
+      !isFinite(desktopWidth) ||
+      desktopWidth <= 0
+    ) {
+      desktopWidth = 1320;
+    }
+
+    self.container.style.width = "100%";
+
+    self.container.style.maxWidth =
+      desktopWidth + "px";
+
+    self.container.style.boxSizing =
+      "border-box";
+
+    self.container.style.overflow =
+      "hidden";
+
+    /*
+     * The height is controlled dynamically
+     * from the actual image ratio.
+     */
+    self.updateContainerHeight();
+  };
+
+  /* =====================================================
+     CALCULATE CURRENT IMAGE HEIGHT
+     
+     Example:
+     
+     1320 / (1320 / 300) = 300
+     1000 / (1320 / 300) = 227.27
+      768 / (1320 / 300) = 174.54
+      390 / (1320 / 300) = 88.63
+      320 / (1320 / 300) = 72.73
+  ===================================================== */
+
+  AdSlot.prototype.updateContainerHeight =
+    function () {
+      var self = this;
+
+      if (
+        !self.ads.length
+      ) {
+        self.container.style.height =
+          "0px";
+
+        return;
+      }
+
+      var currentAd =
+        self.ads[self.index];
+
+      var ratio =
+        self.getDefaultRatio();
+
+      if (
+        currentAd &&
+        currentAd._tfeRatio &&
+        isFinite(currentAd._tfeRatio) &&
+        currentAd._tfeRatio > 0
+      ) {
+        ratio =
+          currentAd._tfeRatio;
+      }
+
+      var width =
+        self.container.clientWidth;
+
+      if (
+        !width ||
+        width <= 0
+      ) {
+        return;
+      }
+
+      var height =
+        width / ratio;
+
+      self.container.style.height =
+        Math.ceil(height) + "px";
+    };
+
+  /* =====================================================
+     READ ACTUAL IMAGE RATIO
+     
+     This makes the widget work even if an ad
+     has a slightly different image dimension.
+  ===================================================== */
+
+  AdSlot.prototype.loadImageRatios =
+    function () {
+      var self = this;
+
+      self.ads.forEach(function (ad) {
+        if (
+          ad._tfeRatio
+        ) {
+          return;
+        }
+
+        if (
+          !ad.image_url
+        ) {
+          return;
+        }
+
+        var image =
+          new Image();
+
+        image.onload =
+          function () {
+            if (
+              image.naturalWidth > 0 &&
+              image.naturalHeight > 0
+            ) {
+              ad._tfeRatio =
+                image.naturalWidth /
+                image.naturalHeight;
+
+              if (
+                self.index ===
+                self.ads.indexOf(ad)
+              ) {
+                self.updateContainerHeight();
+              }
+            }
+          };
+
+        image.src =
+          ad.image_url;
+      });
+    };
+
+  /* =====================================================
+     RESIZE OBSERVER
+  ===================================================== */
+
   AdSlot.prototype.setupResizeObserver =
     function () {
       var self = this;
@@ -459,10 +633,19 @@
       if (
         !("ResizeObserver" in window)
       ) {
+        window.addEventListener(
+          "resize",
+          function () {
+            self.updateContainerHeight();
+          }
+        );
+
         return;
       }
 
-      if (self.resizeObserver) {
+      if (
+        self.resizeObserver
+      ) {
         try {
           self.resizeObserver.disconnect();
         } catch (e) {}
@@ -471,283 +654,449 @@
       }
 
       self.resizeObserver =
-        new ResizeObserver(function () {
-          if (!self.track) {
-            return;
+        new ResizeObserver(
+          function () {
+            self.updateContainerHeight();
           }
-
-          self.goTo(self.index);
-        });
+        );
 
       self.resizeObserver.observe(
         self.container
       );
     };
 
-  /*
-   * -------------------------------------------------------
-   * Render
-   * -------------------------------------------------------
-   */
-  AdSlot.prototype.render = function () {
-    var self = this;
+  /* =====================================================
+     RENDER
+  ===================================================== */
 
-    self.stopAutoplay();
+  AdSlot.prototype.render =
+    function () {
+      var self = this;
 
-    if (self.observer) {
-      try {
-        self.observer.disconnect();
-      } catch (e) {}
+      self.stopAutoplay();
 
-      self.observer = null;
-    }
+      if (
+        self.observer
+      ) {
+        try {
+          self.observer.disconnect();
+        } catch (e) {}
 
-    if (self.resizeObserver) {
-      try {
-        self.resizeObserver.disconnect();
-      } catch (e) {}
+        self.observer = null;
+      }
 
-      self.resizeObserver = null;
-    }
+      if (
+        self.resizeObserver
+      ) {
+        try {
+          self.resizeObserver.disconnect();
+        } catch (e) {}
 
-    self.container.innerHTML = "";
+        self.resizeObserver = null;
+      }
 
-    self.track = null;
-    self.dotsWrap = null;
+      self.container.innerHTML = "";
 
-    if (!self.ads.length) {
-      self.container.style.height = "auto";
-      return;
-    }
+      self.track = null;
 
-    self.applySizing();
+      self.dotsWrap = null;
 
-    var track = el("div", {
-      class: "tfe-ad-track",
-    });
+      self.slideRatios = [];
 
-    var dotsWrap = el("div", {
-      class: "tfe-ad-dots",
-    });
+      if (
+        !self.ads.length
+      ) {
+        self.container.style.height =
+          "0px";
 
-    self.ads.forEach(function (ad, i) {
-      var img = el("img", {
-        src: ad.image_url,
-        alt:
-          ad.alt_text ||
-          ad.title ||
-          "Advertisement",
-        loading:
-          i === 0
-            ? "eager"
-            : "lazy",
-        decoding: "async",
-      });
+        return;
+      }
+
+      self.applySizing();
 
       /*
-       * Explicit responsive image rules.
+       * Track is used only as a wrapper.
+       * Slides are stacked instead of being
+       * horizontally translated.
        *
-       * Width follows slide/container.
-       * Height remains automatic.
+       * This prevents flex layout from affecting
+       * image height on small screens.
        */
-      img.style.display = "block";
-      img.style.width = "100%";
-      img.style.maxWidth = "100%";
-      img.style.height = "auto";
-      img.style.minWidth = "0";
-      img.style.margin = "0";
-      img.style.padding = "0";
-      img.style.border = "0";
-      img.style.objectFit = "initial";
-      img.style.boxSizing = "border-box";
 
-      var anchor = el(
-        "a",
-        {
-          href: ad.target_url || "#",
-          target: ad.open_in_new_tab
-            ? "_blank"
-            : "_self",
-          rel:
-            "noopener noreferrer sponsored",
-          "aria-label":
-            ad.title ||
-            "Advertisement",
-        },
-        [img]
-      );
+      var track =
+        el("div", {
+          class: "tfe-ad-track"
+        });
 
-      anchor.addEventListener(
-        "click",
-        function () {
-          sendBeacon(
-            self.apiBase,
-            {
-              ad_id: ad.id,
-              event_type: "click",
+      var dotsWrap =
+        el("div", {
+          class: "tfe-ad-dots"
+        });
+
+      self.ads.forEach(
+        function (ad, i) {
+          var img =
+            el(
+              "img",
+              {
+                src:
+                  ad.image_url,
+
+                alt:
+                  ad.alt_text ||
+                  ad.title ||
+                  "Advertisement",
+
+                loading:
+                  i === 0
+                    ? "eager"
+                    : "lazy",
+
+                decoding:
+                  "async"
+              }
+            );
+
+          /*
+           * Explicit image rules.
+           *
+           * NEVER crop.
+           * NEVER force height.
+           */
+
+          img.style.display =
+            "block";
+
+          img.style.width =
+            "100%";
+
+          img.style.maxWidth =
+            "100%";
+
+          img.style.height =
+            "auto";
+
+          img.style.minWidth =
+            "0";
+
+          img.style.minHeight =
+            "0";
+
+          img.style.margin =
+            "0";
+
+          img.style.padding =
+            "0";
+
+          img.style.border =
+            "0";
+
+          img.style.objectFit =
+            "contain";
+
+          img.style.objectPosition =
+            "center";
+
+          img.style.boxSizing =
+            "border-box";
+
+          /*
+           * Get exact image ratio
+           * when browser loads it.
+           */
+
+          img.addEventListener(
+            "load",
+            function () {
+              if (
+                img.naturalWidth > 0 &&
+                img.naturalHeight > 0
+              ) {
+                ad._tfeRatio =
+                  img.naturalWidth /
+                  img.naturalHeight;
+
+                if (
+                  self.index === i
+                ) {
+                  self.updateContainerHeight();
+                }
+              }
             }
           );
+
+          var anchor =
+            el(
+              "a",
+              {
+                href:
+                  ad.target_url ||
+                  "#",
+
+                target:
+                  ad.open_in_new_tab
+                    ? "_blank"
+                    : "_self",
+
+                rel:
+                  "noopener noreferrer sponsored",
+
+                "aria-label":
+                  ad.title ||
+                  "Advertisement"
+              },
+              [img]
+            );
+
+          anchor.addEventListener(
+            "click",
+            function () {
+              sendBeacon(
+                self.apiBase,
+                {
+                  ad_id:
+                    ad.id,
+
+                  event_type:
+                    "click"
+                }
+              );
+            }
+          );
+
+          var slide =
+            el(
+              "div",
+              {
+                class:
+                  "tfe-ad-slide" +
+                  (
+                    i === 0
+                      ? " active"
+                      : ""
+                  )
+              },
+              [anchor]
+            );
+
+          track.appendChild(
+            slide
+          );
+
+          if (
+            self.ads.length > 1
+          ) {
+            var dot =
+              el(
+                "button",
+                {
+                  class:
+                    "tfe-ad-dot" +
+                    (
+                      i === 0
+                        ? " active"
+                        : ""
+                    ),
+
+                  "aria-label":
+                    "Go to ad " +
+                    (i + 1),
+
+                  type:
+                    "button"
+                }
+              );
+
+            dot.addEventListener(
+              "click",
+              function () {
+                self.goTo(i);
+
+                self.restartAutoplay();
+              }
+            );
+
+            dotsWrap.appendChild(
+              dot
+            );
+          }
         }
       );
 
-      var slide = el(
-        "div",
-        {
-          class: "tfe-ad-slide",
-        },
-        [anchor]
+      self.container.appendChild(
+        track
       );
 
-      track.appendChild(slide);
+      if (
+        self.ads.length > 1
+      ) {
+        self.container.appendChild(
+          dotsWrap
+        );
+      }
 
-      if (self.ads.length > 1) {
-        var dot = el(
-          "button",
+      self.container.appendChild(
+        el(
+          "span",
           {
             class:
-              "tfe-ad-dot" +
-              (i === 0
-                ? " active"
-                : ""),
-            "aria-label":
-              "Go to ad " +
-              (i + 1),
-            type: "button",
-          }
-        );
+              "tfe-ad-label"
+          },
+          [
+            document.createTextNode(
+              "Ad"
+            )
+          ]
+        )
+      );
 
-        dot.addEventListener(
-          "click",
+      self.track =
+        track;
+
+      self.dotsWrap =
+        dotsWrap;
+
+      self.index = 0;
+
+      self.goTo(0);
+
+      self.loadImageRatios();
+
+      self.observeVisibility();
+
+      self.setupResizeObserver();
+
+      /*
+       * Start autoplay only when
+       * multiple advertisements exist.
+       */
+
+      if (
+        self.ads.length > 1
+      ) {
+        self.startAutoplay();
+
+        self.container.addEventListener(
+          "mouseenter",
           function () {
-            self.goTo(i);
-            self.restartAutoplay();
+            self.stopAutoplay();
           }
         );
 
-        dotsWrap.appendChild(dot);
+        self.container.addEventListener(
+          "mouseleave",
+          function () {
+            self.startAutoplay();
+          }
+        );
       }
-    });
+    };
 
-    self.container.appendChild(track);
+  /* =====================================================
+     GO TO AD
+  ===================================================== */
 
-    if (self.ads.length > 1) {
-      self.container.appendChild(
-        dotsWrap
+  AdSlot.prototype.goTo =
+    function (i) {
+      var self = this;
+
+      if (
+        !self.ads.length
+      ) {
+        return;
+      }
+
+      if (
+        i < 0
+      ) {
+        i = 0;
+      }
+
+      if (
+        i >= self.ads.length
+      ) {
+        i =
+          self.ads.length - 1;
+      }
+
+      self.index = i;
+
+      if (
+        self.track
+      ) {
+        Array.prototype.forEach.call(
+          self.track.children,
+          function (slide, idx) {
+            slide.classList.toggle(
+              "active",
+              idx === i
+            );
+          }
+        );
+      }
+
+      if (
+        self.dotsWrap
+      ) {
+        Array.prototype.forEach.call(
+          self.dotsWrap.children,
+          function (dot, idx) {
+            dot.classList.toggle(
+              "active",
+              idx === i
+            );
+          }
+        );
+      }
+
+      /*
+       * Resize container according to
+       * the current advertisement.
+       */
+
+      self.updateContainerHeight();
+
+      self.markImpression(i);
+    };
+
+  /* =====================================================
+     NEXT AD
+  ===================================================== */
+
+  AdSlot.prototype.next =
+    function () {
+      var self = this;
+
+      if (
+        !self.ads.length
+      ) {
+        return;
+      }
+
+      var nextIndex =
+        (
+          self.index + 1
+        ) %
+        self.ads.length;
+
+      self.goTo(
+        nextIndex
       );
-    }
+    };
 
-    self.container.appendChild(
-      el(
-        "span",
-        {
-          class: "tfe-ad-label",
-        },
-        [
-          document.createTextNode(
-            "Ad"
-          ),
-        ]
-      )
-    );
+  /* =====================================================
+     START AUTOPLAY
+  ===================================================== */
 
-    self.track = track;
-
-    self.dotsWrap = dotsWrap;
-
-    self.index = 0;
-
-    self.goTo(0);
-
-    self.observeVisibility();
-
-    self.setupResizeObserver();
-
-    /*
-     * Start autoplay only when there are
-     * multiple advertisements.
-     */
-    if (self.ads.length > 1) {
-      self.startAutoplay();
-
-      self.container.addEventListener(
-        "mouseenter",
-        function () {
-          self.stopAutoplay();
-        }
-      );
-
-      self.container.addEventListener(
-        "mouseleave",
-        function () {
-          self.startAutoplay();
-        }
-      );
-    }
-  };
-
-  /*
-   * -------------------------------------------------------
-   * Go to ad
-   * -------------------------------------------------------
-   */
-  AdSlot.prototype.goTo = function (i) {
-    if (!this.ads.length) {
-      return;
-    }
-
-    this.index = i;
-
-    if (this.track) {
-      this.track.style.transform =
-        "translate3d(-" +
-        i * 100 +
-        "%, 0, 0)";
-    }
-
-    if (this.dotsWrap) {
-      Array.prototype.forEach.call(
-        this.dotsWrap.children,
-        function (dot, idx) {
-          dot.classList.toggle(
-            "active",
-            idx === i
-          );
-        }
-      );
-    }
-
-    this.markImpression(i);
-  };
-
-  /*
-   * -------------------------------------------------------
-   * Next ad
-   * -------------------------------------------------------
-   */
-  AdSlot.prototype.next = function () {
-    if (!this.ads.length) {
-      return;
-    }
-
-    var nextIndex =
-      (this.index + 1) %
-      this.ads.length;
-
-    this.goTo(nextIndex);
-  };
-
-  /*
-   * -------------------------------------------------------
-   * Start autoplay
-   * -------------------------------------------------------
-   */
   AdSlot.prototype.startAutoplay =
     function () {
       var self = this;
 
       self.stopAutoplay();
 
-      if (self.ads.length <= 1) {
+      if (
+        self.ads.length <= 1
+      ) {
         return;
       }
 
@@ -760,14 +1109,15 @@
         );
     };
 
-  /*
-   * -------------------------------------------------------
-   * Stop autoplay
-   * -------------------------------------------------------
-   */
+  /* =====================================================
+     STOP AUTOPLAY
+  ===================================================== */
+
   AdSlot.prototype.stopAutoplay =
     function () {
-      if (this.timer) {
+      if (
+        this.timer
+      ) {
         window.clearInterval(
           this.timer
         );
@@ -776,26 +1126,27 @@
       }
     };
 
-  /*
-   * -------------------------------------------------------
-   * Restart autoplay
-   * -------------------------------------------------------
-   */
+  /* =====================================================
+     RESTART AUTOPLAY
+  ===================================================== */
+
   AdSlot.prototype.restartAutoplay =
     function () {
-      if (this.ads.length > 1) {
+      if (
+        this.ads.length > 1
+      ) {
         this.startAutoplay();
       }
     };
 
-  /*
-   * -------------------------------------------------------
-   * Impression tracking
-   * -------------------------------------------------------
-   */
+  /* =====================================================
+     IMPRESSION TRACKING
+  ===================================================== */
+
   AdSlot.prototype.markImpression =
     function (i) {
-      var ad = this.ads[i];
+      var ad =
+        this.ads[i];
 
       if (
         !ad ||
@@ -804,22 +1155,25 @@
         return;
       }
 
-      this.impressed[ad.id] = true;
+      this.impressed[ad.id] =
+        true;
 
       sendBeacon(
         this.apiBase,
         {
-          ad_id: ad.id,
-          event_type: "impression",
+          ad_id:
+            ad.id,
+
+          event_type:
+            "impression"
         }
       );
     };
 
-  /*
-   * -------------------------------------------------------
-   * Visibility tracking
-   * -------------------------------------------------------
-   */
+  /* =====================================================
+     VISIBILITY TRACKING
+  ===================================================== */
+
   AdSlot.prototype.observeVisibility =
     function () {
       var self = this;
@@ -853,7 +1207,7 @@
             );
           },
           {
-            threshold: 0.5,
+            threshold: 0.5
           }
         );
 
@@ -861,37 +1215,41 @@
         self.container
       );
 
-      self.observer = observer;
+      self.observer =
+        observer;
     };
 
-  /*
-   * -------------------------------------------------------
-   * Initialize slot
-   * -------------------------------------------------------
-   */
-  AdSlot.prototype.init = function () {
-    var self = this;
+  /* =====================================================
+     INITIALIZE SLOT
+  ===================================================== */
 
-    return self
-      .fetchAds()
-      .then(function () {
-        self.render();
-      });
-  };
+  AdSlot.prototype.init =
+    function () {
+      var self = this;
 
-  /*
-   * -------------------------------------------------------
-   * Initialize all widgets
-   * -------------------------------------------------------
-   */
+      return self
+        .fetchAds()
+        .then(
+          function () {
+            self.render();
+          }
+        );
+    };
+
+  /* =====================================================
+     INITIALIZE ALL WIDGETS
+  ===================================================== */
+
   function initAll(root) {
     injectStylesOnce();
 
-    var containers = (
-      root || document
-    ).querySelectorAll(
-      ".tfe-ad-widget:not([data-tfe-initialized])"
-    );
+    var containers =
+      (
+        root ||
+        document
+      ).querySelectorAll(
+        ".tfe-ad-widget:not([data-tfe-initialized])"
+      );
 
     Array.prototype.forEach.call(
       containers,
@@ -917,7 +1275,9 @@
         );
 
         var slot =
-          new AdSlot(container);
+          new AdSlot(
+            container
+          );
 
         slot.init();
 
@@ -927,17 +1287,18 @@
     );
   }
 
-  /*
-   * -------------------------------------------------------
-   * Refresh all initialized widgets
-   * -------------------------------------------------------
-   */
+  /* =====================================================
+     REFRESH ALL WIDGETS
+  ===================================================== */
+
   function refreshAll(root) {
-    var containers = (
-      root || document
-    ).querySelectorAll(
-      ".tfe-ad-widget[data-tfe-initialized]"
-    );
+    var containers =
+      (
+        root ||
+        document
+      ).querySelectorAll(
+        ".tfe-ad-widget[data-tfe-initialized]"
+      );
 
     Array.prototype.forEach.call(
       containers,
@@ -953,21 +1314,19 @@
     );
   }
 
-  /*
-   * -------------------------------------------------------
-   * Public API
-   * -------------------------------------------------------
-   */
+  /* =====================================================
+     PUBLIC API
+  ===================================================== */
+
   window.TFEAdWidget = {
     init: initAll,
-    refresh: refreshAll,
+    refresh: refreshAll
   };
 
-  /*
-   * -------------------------------------------------------
-   * Auto initialize
-   * -------------------------------------------------------
-   */
+  /* =====================================================
+     AUTO INITIALIZE
+  ===================================================== */
+
   if (
     document.readyState ===
     "loading"
@@ -981,4 +1340,5 @@
   } else {
     initAll();
   }
+
 })(window, document);

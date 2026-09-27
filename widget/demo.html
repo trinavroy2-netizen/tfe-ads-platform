@@ -1,21 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>Engineering Hub — Engineering Resources & Tools</title>
 
   <style>
-    /* ========================================
-       RESET
-    ======================================== */
-
     * {
       box-sizing: border-box;
       margin: 0;
@@ -27,14 +18,7 @@
     }
 
     body {
-      font-family:
-        Inter,
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
-
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: #172033;
       background: #f6f8fb;
       line-height: 1.6;
@@ -46,10 +30,9 @@
     }
 
     img {
-      display: block;
       max-width: 100%;
+      display: block;
     }
-
 
     /* ========================================
        GLOBAL CONTAINER
@@ -62,7 +45,6 @@
       padding-left: 32px;
       padding-right: 32px;
     }
-
 
     /* ========================================
        TOP BAR
@@ -79,16 +61,13 @@
       width: 100%;
       max-width: 1500px;
       margin: 0 auto;
-
       padding: 9px 32px;
 
       display: flex;
-      align-items: center;
       justify-content: space-between;
-
+      align-items: center;
       gap: 20px;
     }
-
 
     /* ========================================
        HEADER
@@ -97,7 +76,6 @@
     header {
       width: 100%;
       background: #ffffff;
-
       border-bottom: 1px solid #e5e7eb;
 
       position: sticky;
@@ -109,25 +87,21 @@
       width: 100%;
       max-width: 1500px;
       margin: 0 auto;
-
       padding: 18px 32px;
 
       display: flex;
-      align-items: center;
       justify-content: space-between;
-
+      align-items: center;
       gap: 30px;
     }
 
     .logo {
       flex-shrink: 0;
 
-      color: #111827;
-
       font-size: 23px;
       font-weight: 800;
-
       letter-spacing: -0.5px;
+      color: #111827;
     }
 
     .logo span {
@@ -137,13 +111,11 @@
     nav {
       display: flex;
       align-items: center;
-
       gap: 28px;
-
-      color: #4b5563;
 
       font-size: 14px;
       font-weight: 600;
+      color: #4b5563;
     }
 
     nav a {
@@ -157,12 +129,11 @@
     .header-button {
       flex-shrink: 0;
 
-      padding: 10px 17px;
-
-      border-radius: 7px;
-
       background: #2563eb;
       color: #ffffff;
+
+      padding: 10px 17px;
+      border-radius: 7px;
 
       font-size: 14px;
       font-weight: 600;
@@ -177,23 +148,19 @@
       transform: translateY(-1px);
     }
 
-
     /* ========================================
        HERO
     ======================================== */
 
     .hero {
       width: 100%;
-
       background: #ffffff;
-
       border-bottom: 1px solid #e5e7eb;
     }
 
     .hero-inner {
       width: 100%;
       max-width: 1440px;
-
       margin: 0 auto;
 
       padding: 75px 32px 80px;
@@ -202,43 +169,38 @@
     .hero-label {
       display: inline-block;
 
-      margin-bottom: 18px;
+      color: #2563eb;
+      background: #eff6ff;
 
       padding: 6px 11px;
-
       border-radius: 5px;
-
-      background: #eff6ff;
-      color: #2563eb;
 
       font-size: 12px;
       font-weight: 700;
-
       letter-spacing: 0.3px;
+
+      margin-bottom: 18px;
     }
 
     .hero h1 {
       max-width: 820px;
 
+      font-size: clamp(36px, 4vw, 56px);
+      line-height: 1.1;
+      letter-spacing: -1.8px;
+
       margin-bottom: 20px;
 
       color: #111827;
-
-      font-size: clamp(36px, 4vw, 56px);
-      line-height: 1.1;
-
-      letter-spacing: -1.8px;
     }
 
     .hero p {
       max-width: 750px;
 
       color: #6b7280;
-
       font-size: 17px;
       line-height: 1.75;
     }
-
 
     /* ========================================
        ADVERTISEMENT SECTION
@@ -260,44 +222,47 @@
 
       padding-left: 32px;
       padding-right: 32px;
+    }
 
-      box-sizing: border-box;
+    .ad-label {
+      margin-bottom: 8px;
 
-      height: auto;
+      color: #9ca3af;
 
-      overflow: visible;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
     }
 
     /*
+      ========================================
       TFE AD WIDGET
 
-      Desktop:
-      Up to 1320px wide.
+      Keep the host website styling simple.
 
-      Smaller screen:
-      Automatically uses available width.
+      The TFE widget itself controls:
+      - advertisement image
+      - carousel
+      - image ratio
+      - responsive image sizing
 
-      Height is controlled by the widget/image
-      proportionally. No fixed height here.
+      We only control the available width here.
+    ========================================
     */
 
-    .ad-container .tfe-ad-widget {
+    .tfe-ad-widget {
       display: block;
 
       width: 100%;
       max-width: 1320px;
 
-      margin: 0 auto;
-      padding: 0;
+      height: auto;
 
-      height: auto !important;
-      min-height: 0 !important;
+      margin: 0 auto;
 
       box-sizing: border-box;
-
-      overflow: visible !important;
     }
-
 
     /* ========================================
        CONTENT
@@ -316,20 +281,18 @@
     }
 
     .section-title h2 {
-      margin-bottom: 6px;
-
       color: #111827;
 
       font-size: 29px;
       line-height: 1.25;
+
+      margin-bottom: 6px;
     }
 
     .section-title p {
       color: #6b7280;
-
       font-size: 15px;
     }
-
 
     /* ========================================
        RESOURCE CARDS
@@ -338,8 +301,7 @@
     .cards {
       display: grid;
 
-      grid-template-columns:
-        repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
 
       gap: 24px;
     }
@@ -367,16 +329,16 @@
     .card-image {
       height: 190px;
 
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
       background:
         linear-gradient(
           135deg,
           #dbeafe,
           #eef2ff
         );
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
       font-size: 45px;
     }
@@ -388,25 +350,23 @@
     .card-content small {
       display: block;
 
-      margin-bottom: 7px;
-
       color: #2563eb;
 
       font-size: 11px;
       font-weight: 700;
-
       letter-spacing: 0.8px;
-
       text-transform: uppercase;
+
+      margin-bottom: 7px;
     }
 
     .card-content h3 {
-      margin-bottom: 8px;
-
       color: #111827;
 
       font-size: 19px;
       line-height: 1.35;
+
+      margin-bottom: 8px;
     }
 
     .card-content p {
@@ -416,9 +376,8 @@
       line-height: 1.65;
     }
 
-
     /* ========================================
-       INFORMATION SECTION
+       FEATURE SECTION
     ======================================== */
 
     .lower {
@@ -430,19 +389,19 @@
     }
 
     .info-box {
+      background: #111827;
+      color: #ffffff;
+
       padding: 48px;
 
       border-radius: 13px;
-
-      background: #111827;
-      color: #ffffff;
     }
 
     .info-box h2 {
-      margin-bottom: 12px;
-
       font-size: 28px;
       line-height: 1.3;
+
+      margin-bottom: 12px;
     }
 
     .info-box p {
@@ -454,7 +413,6 @@
       line-height: 1.7;
     }
 
-
     /* ========================================
        FOOTER
     ======================================== */
@@ -462,10 +420,10 @@
     footer {
       width: 100%;
 
-      padding: 36px 0;
-
       background: #111827;
       color: #9ca3af;
+
+      padding: 36px 0;
 
       font-size: 13px;
     }
@@ -480,12 +438,11 @@
       padding-right: 32px;
 
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      align-items: center;
 
       gap: 20px;
     }
-
 
     /* ========================================
        TABLET
@@ -512,26 +469,15 @@
       }
 
       /*
-        TFE AD
-
-        Uses available width.
-        No fixed height.
+        Ad keeps full available width.
+        Height remains automatic.
       */
-
-      .ad-container {
-        height: auto;
-        overflow: visible;
-      }
-
-      .ad-container .tfe-ad-widget {
+      .tfe-ad-widget {
         width: 100%;
         max-width: 1320px;
-
-        height: auto !important;
-        min-height: 0 !important;
+        height: auto;
       }
     }
-
 
     /* ========================================
        MOBILE
@@ -541,7 +487,6 @@
 
       .topbar-inner {
         justify-content: center;
-
         text-align: center;
       }
 
@@ -593,31 +538,19 @@
         align-items: flex-start;
       }
 
-
-      /* TFE AD */
-
-      .ad-container {
+      /*
+        Mobile ad:
+        use the available width only.
+        Do not set a fixed height.
+      */
+      .tfe-ad-widget {
+        display: block;
         width: 100%;
-
-        padding-left: 24px;
-        padding-right: 24px;
-
+        max-width: 100%;
         height: auto;
-
-        overflow: visible;
-      }
-
-      .ad-container .tfe-ad-widget {
-        width: 100%;
-        max-width: 1320px;
-
-        height: auto !important;
-        min-height: 0 !important;
-
-        overflow: visible !important;
+        margin: 0 auto;
       }
     }
-
 
     /* ========================================
        SMALL MOBILE
@@ -629,30 +562,10 @@
       .topbar-inner,
       .header-inner,
       .hero-inner,
+      .ad-container,
       .footer-inner {
         padding-left: 16px;
         padding-right: 16px;
-      }
-
-      .ad-container {
-        width: 100%;
-
-        padding-left: 16px;
-        padding-right: 16px;
-
-        height: auto;
-
-        overflow: visible;
-      }
-
-      .ad-container .tfe-ad-widget {
-        width: 100%;
-        max-width: 1320px;
-
-        height: auto !important;
-        min-height: 0 !important;
-
-        overflow: visible !important;
       }
 
       .hero-inner {
@@ -683,10 +596,20 @@
       .info-box h2 {
         font-size: 24px;
       }
+
+      /*
+        Very small screens:
+        widget still uses full available width.
+        No crop / no fixed height from host page.
+      */
+      .tfe-ad-widget {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+      }
     }
   </style>
 </head>
-
 
 <body>
 
@@ -695,7 +618,6 @@
   ======================================== -->
 
   <div class="topbar">
-
     <div class="topbar-inner">
 
       <span>
@@ -707,7 +629,6 @@
       </span>
 
     </div>
-
   </div>
 
 
@@ -716,7 +637,6 @@
   ======================================== -->
 
   <header>
-
     <div class="header-inner">
 
       <a href="#" class="logo">
@@ -724,7 +644,6 @@
       </a>
 
       <nav>
-
         <a href="#">
           Home
         </a>
@@ -744,7 +663,6 @@
         <a href="#">
           Projects
         </a>
-
       </nav>
 
       <a href="#" class="header-button">
@@ -752,7 +670,6 @@
       </a>
 
     </div>
-
   </header>
 
 
@@ -769,14 +686,12 @@
       </span>
 
       <h1>
-        Practical engineering tools,
-        resources and technical knowledge.
+        Practical engineering tools, resources and technical knowledge.
       </h1>
 
       <p>
-        Explore engineering calculators,
-        technical references, project resources
-        and practical tools designed for engineers
+        Explore engineering calculators, technical references,
+        project resources and practical tools designed for engineers
         and technical professionals.
       </p>
 
@@ -786,7 +701,7 @@
 
 
   <!-- ========================================
-       TFE ADVERTISEMENT
+       ADVERTISEMENT
   ======================================== -->
 
   <section class="ad-section">
@@ -807,7 +722,7 @@
 
 
   <!-- ========================================
-       ENGINEERING RESOURCES
+       CONTENT
   ======================================== -->
 
   <main class="content">
@@ -821,8 +736,7 @@
         </h2>
 
         <p>
-          Explore useful resources for everyday
-          engineering work.
+          Explore useful resources for everyday engineering work.
         </p>
 
       </div>
@@ -849,8 +763,8 @@
             </h3>
 
             <p>
-              Voltage, current, power, transformer
-              and electrical calculation resources.
+              Voltage, current, power, transformer and
+              electrical calculation resources.
             </p>
 
           </div>
@@ -877,8 +791,8 @@
             </h3>
 
             <p>
-              Practical calculators and references
-              for construction and structural engineering.
+              Practical calculators and references for
+              construction and structural engineering.
             </p>
 
           </div>
@@ -921,7 +835,7 @@
 
 
   <!-- ========================================
-       INFORMATION
+       INFORMATION SECTION
   ======================================== -->
 
   <section class="lower">
@@ -935,9 +849,9 @@
         </h2>
 
         <p>
-          Find technical information, engineering
-          tools and resources that help you solve
-          everyday engineering problems more efficiently.
+          Find technical information, engineering tools and
+          resources that help you solve everyday engineering
+          problems more efficiently.
         </p>
 
       </div>
@@ -969,7 +883,7 @@
 
 
   <!-- ========================================
-       TFE AD WIDGET
+       RENDER-HOSTED TFE AD WIDGET
   ======================================== -->
 
   <script
@@ -978,5 +892,4 @@
   </script>
 
 </body>
-
 </html>
