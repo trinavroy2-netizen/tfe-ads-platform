@@ -9,8 +9,8 @@ const emptyForm = {
   slug: "",
   desktop_width: 1320,
   desktop_height: 300,
-  tablet_height: 260,
-  mobile_height: 220,
+  tablet_height: 175,
+  mobile_height: 80,
 };
 
 export default function PlacementsPage() {
@@ -202,8 +202,7 @@ export default function PlacementsPage() {
                     onChange={(e) =>
                       setForm({
                         ...form,
-                        vendor_id:
-                          e.target.value,
+                        vendor_id: e.target.value,
                       })
                     }
                     className="h-10 w-full rounded-md border border-[#3a3a3a] bg-[#151515] px-3 text-sm text-white outline-none transition focus:border-[#777]"
@@ -286,14 +285,12 @@ export default function PlacementsPage() {
                     <input
                       type="number"
                       min="1"
-                      value={
-                        form.desktop_width
-                      }
+                      value={form.desktop_width}
                       onChange={(e) =>
                         setForm({
                           ...form,
                           desktop_width:
-                            +e.target.value,
+                            Number(e.target.value),
                         })
                       }
                       className="h-10 w-full rounded-md border border-[#3a3a3a] bg-[#151515] px-3 pr-12 text-sm text-white outline-none transition focus:border-[#777]"
@@ -303,6 +300,10 @@ export default function PlacementsPage() {
                       px
                     </span>
                   </div>
+
+                  <p className="mt-1.5 text-[11px] text-[#555]">
+                    Base banner width
+                  </p>
                 </div>
 
                 {/* DESKTOP HEIGHT */}
@@ -315,14 +316,12 @@ export default function PlacementsPage() {
                     <input
                       type="number"
                       min="1"
-                      value={
-                        form.desktop_height
-                      }
+                      value={form.desktop_height}
                       onChange={(e) =>
                         setForm({
                           ...form,
                           desktop_height:
-                            +e.target.value,
+                            Number(e.target.value),
                         })
                       }
                       className="h-10 w-full rounded-md border border-[#3a3a3a] bg-[#151515] px-3 pr-12 text-sm text-white outline-none transition focus:border-[#777]"
@@ -332,6 +331,10 @@ export default function PlacementsPage() {
                       px
                     </span>
                   </div>
+
+                  <p className="mt-1.5 text-[11px] text-[#555]">
+                    1320 × 300 recommended
+                  </p>
                 </div>
 
                 {/* TABLET */}
@@ -344,14 +347,12 @@ export default function PlacementsPage() {
                     <input
                       type="number"
                       min="1"
-                      value={
-                        form.tablet_height
-                      }
+                      value={form.tablet_height}
                       onChange={(e) =>
                         setForm({
                           ...form,
                           tablet_height:
-                            +e.target.value,
+                            Number(e.target.value),
                         })
                       }
                       className="h-10 w-full rounded-md border border-[#3a3a3a] bg-[#151515] px-3 pr-12 text-sm text-white outline-none transition focus:border-[#777]"
@@ -363,7 +364,7 @@ export default function PlacementsPage() {
                   </div>
 
                   <p className="mt-1.5 text-[11px] text-[#555]">
-                    Screens ≤ 900px
+                    Screens ≤ 900px · Recommended 175px
                   </p>
                 </div>
 
@@ -377,14 +378,12 @@ export default function PlacementsPage() {
                     <input
                       type="number"
                       min="1"
-                      value={
-                        form.mobile_height
-                      }
+                      value={form.mobile_height}
                       onChange={(e) =>
                         setForm({
                           ...form,
                           mobile_height:
-                            +e.target.value,
+                            Number(e.target.value),
                         })
                       }
                       className="h-10 w-full rounded-md border border-[#3a3a3a] bg-[#151515] px-3 pr-12 text-sm text-white outline-none transition focus:border-[#777]"
@@ -396,7 +395,7 @@ export default function PlacementsPage() {
                   </div>
 
                   <p className="mt-1.5 text-[11px] text-[#555]">
-                    Screens ≤ 650px
+                    Screens ≤ 650px · Recommended 80px
                   </p>
                 </div>
               </div>
@@ -530,9 +529,7 @@ export default function PlacementsPage() {
                     {/* VENDOR */}
                     <td className="px-5 py-4">
                       <div className="text-sm font-medium text-white">
-                        {vendorName(
-                          p.vendor_id
-                        )}
+                        {vendorName(p.vendor_id)}
                       </div>
                     </td>
 
@@ -553,9 +550,7 @@ export default function PlacementsPage() {
                     {/* DESKTOP */}
                     <td className="px-5 py-4">
                       <span className="text-xs text-[#999]">
-                        {p.desktop_width}
-                        ×
-                        {p.desktop_height}
+                        {p.desktop_width}×{p.desktop_height}
                       </span>
                     </td>
 
