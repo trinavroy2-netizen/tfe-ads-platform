@@ -1,6 +1,33 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
-from pydantic import BaseModel, Field, ConfigDict
+
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+
+
+# ---------- Helpers ----------
+
+def normalize_utc_datetime(
+    value: Optional[datetime],
+) -> Optional[datetime]:
+    """
+    Normalize incoming datetime values to UTC-naive datetime.
+
+    The frontend sends ISO timestamps with timezone information
+    (for example: 2026-10-01T04:50:00.000Z).
+
+    The database currently uses SQLAlchemy DateTime without timezone=True,
+    so we store the normalized UTC value without tzinfo.
+    """
+    if value is None:
+        return None
+
+    # If the datetime contains timezone information,
+    # convert it to UTC and remove tzinfo.
+    if value.tzinfo is not None:
+        return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+    # If it is already naive, keep it as-is.
+    return value
 
 
 # ---------- Auth ----------
@@ -17,6 +44,7 @@ class Token(BaseModel):
 
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
     id: str
     email: str
     role: str
@@ -31,9 +59,13 @@ class VendorCreate(BaseModel):
 
 
 class VendorUpdate(BaseModel):
-    """Partial update - only send the fields you want to change.
-    Use this (not VendorCreate) for PATCH so toggling is_active doesn't
-    require resending name/slug/allowed_domains."""
+    """
+    Partial update - only send the fields you want to change.
+
+    Use this for PATCH so toggling is_active doesn't require
+    resending name/slug/allowed_domains.
+    """
+
     name: Optional[str] = None
     allowed_domains: Optional[str] = None
     is_active: Optional[bool] = None
@@ -41,6 +73,7 @@ class VendorUpdate(BaseModel):
 
 class VendorOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
     id: str
     name: str
     slug: str
@@ -75,6 +108,7 @@ class PlacementUpdate(BaseModel):
 
 class PlacementOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
     id: str
     vendor_id: str
     name: str
@@ -101,6 +135,11 @@ class AdCreate(BaseModel):
     end_at: Optional[datetime] = None
     open_in_new_tab: bool = True
 
+    @field_validator("start_at", "end_at")
+    @classmethod
+    def normalize_datetime(cls, value: Optional[datetime]):
+        return normalize_utc_datetime(value)
+
 
 class AdUpdate(BaseModel):
     title: Optional[str] = None
@@ -114,9 +153,15 @@ class AdUpdate(BaseModel):
     open_in_new_tab: Optional[bool] = None
     placement_id: Optional[str] = None
 
+    @field_validator("start_at", "end_at")
+    @classmethod
+    def normalize_datetime(cls, value: Optional[datetime]):
+        return normalize_utc_datetime(value)
+
 
 class AdOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
     id: str
     placement_id: str
     title: str
@@ -140,6 +185,8 @@ class AdStats(BaseModel):
     ctr: float
 
 
+# ---------- Statistics ----------
+
 class VendorSummary(BaseModel):
     vendor_id: str
     vendor_name: str
@@ -162,7 +209,7 @@ class OverviewStats(BaseModel):
     by_vendor: List[VendorSummary]
 
 
-# ---------- Public widget ----------
+# ---------- Public Widget ----------
 
 class PublicAdOut(BaseModel):
     id: str
