@@ -159,12 +159,34 @@ class PublicWidgetCorsMiddleware(BaseHTTPMiddleware):
                             vendor,
                             request,
                         )
+
+                        print(
+                            "[cors]",
+                            {
+                                "origin": origin,
+                                "vendor": vendor.slug,
+                                "allowed_domains": vendor.allowed_domains,
+                                "allowed": allow_this_origin,
+                                "method": request.method,
+                            }
+                        )
+
                     except Exception as e:
                         print(
                             "[cors] Domain validation error: "
                             f"{e}"
                         )
                         allow_this_origin = False
+
+                else:
+                    print(
+                        "[cors] Vendor NOT FOUND:",
+                        {
+                            "vendor": vendor_slug,
+                            "origin": origin,
+                            "method": request.method,
+                        },
+                    )
 
             finally:
                 db.close()
