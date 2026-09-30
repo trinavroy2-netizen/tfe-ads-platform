@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -10,6 +11,48 @@ import {
   Settings2,
   Clock3,
 } from "lucide-react";
+
+/**
+ * Convert a database image URL into a full backend URL.
+ *
+ * Supports both:
+ *
+ * Full URL:
+ * https://tfe-ads-backend.onrender.com/api/public/images/UUID
+ *
+ * Relative URL:
+ * /api/public/images/UUID
+ *
+ * This is important because the dashboard and API
+ * can run on different ports/domains.
+ */
+function resolveImageUrl(url: string | null | undefined) {
+  if (!url) return "";
+
+  const trimmedUrl = url.trim();
+
+  if (!trimmedUrl) return "";
+
+  // Already an absolute URL
+  if (
+    trimmedUrl.startsWith("http://") ||
+    trimmedUrl.startsWith("https://")
+  ) {
+    return trimmedUrl;
+  }
+
+  // Database-backed image URL returned by backend
+  if (trimmedUrl.startsWith("/api/")) {
+    return `${API_BASE.replace(/\/$/, "")}${trimmedUrl}`;
+  }
+
+  // Keep other relative URLs working
+  if (trimmedUrl.startsWith("/")) {
+    return `${API_BASE.replace(/\/$/, "")}${trimmedUrl}`;
+  }
+
+  return trimmedUrl;
+}
 
 /**
  * Backend stores datetime values as UTC-naive datetime.
@@ -115,8 +158,9 @@ export default function AdForm({
 
     title: editingAd?.title || "",
 
-    image_url:
-      editingAd?.image_url || "",
+    image_url: resolveImageUrl(
+      editingAd?.image_url || ""
+    ),
 
     target_url:
       editingAd?.target_url || "",
@@ -188,9 +232,28 @@ export default function AdForm({
 
       const data = await res.json();
 
+      /**
+       * Backend may return either:
+       *
+       * /api/public/images/UUID
+       *
+       * or:
+       *
+       * https://backend-domain/api/public/images/UUID
+       *
+       * Normalize both to the backend URL.
+       */
+      const imageUrl = resolveImageUrl(data.url);
+
+      if (!imageUrl) {
+        throw new Error(
+          "Upload succeeded but no image URL was returned."
+        );
+      }
+
       setForm((current) => ({
         ...current,
-        image_url: data.url,
+        image_url: imageUrl,
       }));
     } catch (err: any) {
       setError(
@@ -215,6 +278,14 @@ export default function AdForm({
      */
     const payload = {
       ...form,
+
+      /**
+       * Make sure old database-backed image URLs are also
+       * stored as full backend URLs.
+       */
+      image_url: resolveImageUrl(
+        form.image_url
+      ),
 
       start_at: toUtcISOString(
         form.start_at
@@ -511,24 +582,16 @@ export default function AdForm({
 
             {/* Preview */}
 
-            {form.image_url && (
-              <div className="mt-2.5 border-t border-[var(--admin-border)] pt-2.5">
-                <p className="mb-1 text-[9px] text-[var(--admin-muted)]">
-                  Preview
-                </p>
 
-                <div className="overflow-hidden rounded-md border border-[var(--admin-border)] bg-[var(--admin-surface)]">
-                  <img
-                    src={form.image_url}
-                    alt={
-                      form.alt_text ||
-                      "Advertisement preview"
-                    }
-                    className="block max-h-40 w-full object-contain"
-                  />
-                </div>
-              </div>
-            )}
+            {form.image_url && ( 
+              <div className="mt-2 border-t border-[var(--admin-border)] pt-2"> 
+              <p className="mb-1 text-[9px] text-[var(--admin-muted)]"> Preview </p>
+               <div className="flex h-20 w-full items-center justify-center overflow-hidden rounded-md border border-[var(--admin-border)] bg-[var(--admin-surface)]"> 
+                <img src={resolveImageUrl(form.image_url)} alt={form.alt_text || "Advertisement preview"} className="block h-full w-full object-contain" /> 
+                </div> 
+                </div> 
+              )}
+
           </div>
         )}
       </div>

@@ -1,7 +1,15 @@
+
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, HTTPException, Header, Request
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Header,
+    Request,
+)
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
@@ -14,12 +22,14 @@ router = APIRouter(
 )
 
 
-# ---------- Domain Helpers ----------
+# ============================================================
+# DOMAIN HELPERS
+# ============================================================
 
 def _hostname(url_or_host: str) -> str:
     """
-    Extract a bare hostname from an Origin/Referer header or a plain
-    domain entry.
+    Extract a bare hostname from an Origin/Referer header
+    or a plain domain entry.
 
     Supports:
         https://example.com
@@ -27,6 +37,7 @@ def _hostname(url_or_host: str) -> str:
         example.com
         www.example.com
     """
+
     value = url_or_host.strip().lower()
 
     if "//" in value:
@@ -63,6 +74,7 @@ def _domain_allowed(
 
     # Accept both:
     # example.com <-> www.example.com
+
     expanded = set(allowed)
 
     for domain in allowed:
@@ -84,7 +96,9 @@ def _domain_allowed(
     return _hostname(origin) in expanded
 
 
-# ---------- Vendor Resolution ----------
+# ============================================================
+# VENDOR RESOLUTION
+# ============================================================
 
 def _resolve_vendor(
     db: Session,
@@ -119,7 +133,58 @@ def _resolve_vendor(
     return vendor
 
 
-# ---------- Public Ads ----------
+# ============================================================
+# DATABASE-BACKED IMAGES
+# ============================================================
+
+@router.get("/images/{image_id}")
+def get_database_image(
+    image_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Serve an advertisement image directly from PostgreSQL.
+
+    The actual image bytes are stored in:
+
+        ad_images.data
+
+    No filesystem is used.
+
+    Example:
+
+        GET /api/public/images/<image-id>
+    """
+
+    image = (
+        db.query(models.AdImage)
+        .filter(models.AdImage.id == image_id)
+        .first()
+    )
+
+    if not image:
+        raise HTTPException(
+            status_code=404,
+            detail="Image not found",
+        )
+
+    return Response(
+        content=image.data,
+        media_type=image.content_type,
+        headers={
+            # Images are immutable because each upload receives
+            # a unique UUID.
+            "Cache-Control": (
+                "public, max-age=31536000, immutable"
+            ),
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+# ============================================================
+# PUBLIC ADS
+# ============================================================
 
 @router.get(
     "/ads",
@@ -139,13 +204,20 @@ def get_public_ads(
     Public endpoint used by the embeddable ads widget.
 
     Example:
-        GET /api/public/ads?vendor=toolsforengineers&placement=homepage
+
+        GET /api/public/ads
+            ?vendor=toolsforengineers
+            &placement=homepage
 
     Required header:
+
         X-API-Key: <vendor api key>
     """
 
+    # --------------------------------------------------------
     # 1. Resolve and authenticate vendor
+    # --------------------------------------------------------
+
     vendor_obj = _resolve_vendor(
         db=db,
         vendor_slug=vendor,
@@ -153,7 +225,10 @@ def get_public_ads(
         request=request,
     )
 
+    # --------------------------------------------------------
     # 2. Find active placement belonging to this vendor
+    # --------------------------------------------------------
+
     placement_obj = (
         db.query(models.Placement)
         .filter(
@@ -168,25 +243,10 @@ def get_public_ads(
             status_code=404,
             detail="Unknown or inactive placement",
         )
-
-    # 3. Current UTC time.
-    #
-    # The database currently uses SQLAlchemy DateTime without
-    # timezone=True, so we compare using a UTC-naive datetime.
-    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
-
-    # ---------------------------------------------------------
-    # TEMPORARY SCHEDULE DEBUG
-    # ---------------------------------------------------------
-    print(
-        "[SCHEDULE DEBUG]",
-        {
-            "vendor": vendor_obj.slug,
-            "placement": placement_obj.slug,
-            "now_utc": now_utc,
-        },
+    
+    now_utc = datetime.now(timezone.utc).replace(
+        tzinfo=None
     )
-
     all_ads = (
         db.query(models.Ad)
         .filter(
@@ -199,6 +259,7 @@ def get_public_ads(
     )
 
     for ad in all_ads:
+
         start_passed = (
             ad.start_at is None
             or ad.start_at <= now_utc
@@ -209,27 +270,10 @@ def get_public_ads(
             or ad.end_at >= now_utc
         )
 
-        print(
-            "[SCHEDULE DEBUG]",
-            {
-                "id": ad.id,
-                "title": ad.title,
-                "is_active": ad.is_active,
-                "start_at": ad.start_at,
-                "end_at": ad.end_at,
-                "start_passed": start_passed,
-                "end_not_passed": end_not_passed,
-                "eligible": (
-                    ad.is_active
-                    and start_passed
-                    and end_not_passed
-                ),
-            },
-        )
-
-    # ---------------------------------------------------------
+    # --------------------------------------------------------
     # 4. Get currently eligible ads
-    # ---------------------------------------------------------
+    # --------------------------------------------------------
+
     ads = (
         db.query(models.Ad)
         .filter(
@@ -251,12 +295,10 @@ def get_public_ads(
         .all()
     )
 
-    print(
-        "[SCHEDULE DEBUG] eligible_ads_count =",
-        len(ads),
-    )
-
+    # --------------------------------------------------------
     # 5. Return public-safe ad data
+    # --------------------------------------------------------
+
     return schemas.PublicAdsResponse(
         placement=placement_obj.slug,
         dimensions={
@@ -279,7 +321,9 @@ def get_public_ads(
     )
 
 
-# ---------- Tracking ----------
+# ============================================================
+# TRACKING
+# ============================================================
 
 @router.post("/track")
 def track_event(
@@ -297,7 +341,10 @@ def track_event(
     the requesting origin.
     """
 
+    # --------------------------------------------------------
     # 1. Find ad
+    # --------------------------------------------------------
+
     ad = (
         db.query(models.Ad)
         .filter(models.Ad.id == payload.ad_id)
@@ -310,24 +357,38 @@ def track_event(
             detail="Ad not found",
         )
 
+    # --------------------------------------------------------
     # 2. Resolve vendor through placement
+    # --------------------------------------------------------
+
     vendor = ad.placement.vendor
 
+    # --------------------------------------------------------
     # 3. Validate requesting domain
+    # --------------------------------------------------------
+
     if not _domain_allowed(vendor, request):
         raise HTTPException(
             status_code=403,
             detail="This origin is not authorized for this vendor",
         )
 
+    # --------------------------------------------------------
     # 4. Save event
+    # --------------------------------------------------------
+
     event = models.AdEvent(
         ad_id=ad.id,
         event_type=models.EventType(payload.event_type),
-        referrer=request.headers.get("referer", "")[:500],
+        referrer=request.headers.get(
+            "referer",
+            "",
+        )[:500],
     )
 
     db.add(event)
     db.commit()
 
-    return {"ok": True}
+    return {
+        "ok": True
+    }

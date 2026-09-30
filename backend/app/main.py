@@ -1,8 +1,8 @@
+
 from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
@@ -11,7 +11,15 @@ from .config import settings
 from .database import Base, engine, SessionLocal
 from . import models
 from .security import hash_password
-from .routers import auth, vendors, placements, ads, upload, public, stats
+from .routers import (
+    auth,
+    vendors,
+    placements,
+    ads,
+    upload,
+    public,
+    stats,
+)
 from .routers.public import _domain_allowed
 
 
@@ -29,6 +37,7 @@ def _run_startup_migrations():
     Existing production data is preserved.
     For anything beyond simple additive columns, use Alembic.
     """
+
     with engine.connect() as conn:
         try:
             conn.exec_driver_sql(
@@ -37,6 +46,7 @@ def _run_startup_migrations():
                 ADD COLUMN IF NOT EXISTS description VARCHAR DEFAULT ''
                 """
             )
+
             conn.commit()
 
         except Exception as e:
@@ -82,6 +92,7 @@ app.add_middleware(
 # ============================================================
 # DYNAMIC PUBLIC WIDGET CORS
 # ============================================================
+
 
 class PublicWidgetCorsMiddleware(BaseHTTPMiddleware):
     """
@@ -149,7 +160,9 @@ class PublicWidgetCorsMiddleware(BaseHTTPMiddleware):
             try:
                 vendor = (
                     db.query(models.Vendor)
-                    .filter(models.Vendor.slug == vendor_slug)
+                    .filter(
+                        models.Vendor.slug == vendor_slug
+                    )
                     .first()
                 )
 
@@ -165,10 +178,12 @@ class PublicWidgetCorsMiddleware(BaseHTTPMiddleware):
                             {
                                 "origin": origin,
                                 "vendor": vendor.slug,
-                                "allowed_domains": vendor.allowed_domains,
+                                "allowed_domains": (
+                                    vendor.allowed_domains
+                                ),
                                 "allowed": allow_this_origin,
                                 "method": request.method,
-                            }
+                            },
                         )
 
                     except Exception as e:
@@ -176,6 +191,7 @@ class PublicWidgetCorsMiddleware(BaseHTTPMiddleware):
                             "[cors] Domain validation error: "
                             f"{e}"
                         )
+
                         allow_this_origin = False
 
                 else:
@@ -215,7 +231,9 @@ class PublicWidgetCorsMiddleware(BaseHTTPMiddleware):
         # --------------------------------------------------------
 
         if request.method == "OPTIONS":
-            response = Response(status_code=204)
+            response = Response(
+                status_code=204
+            )
 
         else:
             response = await call_next(request)
@@ -226,37 +244,32 @@ class PublicWidgetCorsMiddleware(BaseHTTPMiddleware):
         # --------------------------------------------------------
 
         if origin and allow_this_origin:
-            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers[
+                "Access-Control-Allow-Origin"
+            ] = origin
 
-            response.headers["Vary"] = "Origin"
+            response.headers[
+                "Vary"
+            ] = "Origin"
 
-            response.headers["Access-Control-Allow-Credentials"] = (
-                "false"
-            )
+            response.headers[
+                "Access-Control-Allow-Credentials"
+            ] = "false"
 
-            response.headers["Access-Control-Allow-Headers"] = (
-                "Content-Type, X-API-Key"
-            )
+            response.headers[
+                "Access-Control-Allow-Headers"
+            ] = "Content-Type, X-API-Key"
 
-            response.headers["Access-Control-Allow-Methods"] = (
-                "GET, POST, OPTIONS"
-            )
+            response.headers[
+                "Access-Control-Allow-Methods"
+            ] = "GET, POST, OPTIONS"
 
         return response
 
 
 # Register dynamic widget CORS middleware.
-app.add_middleware(PublicWidgetCorsMiddleware)
-
-
-# ============================================================
-# STATIC UPLOADS
-# ============================================================
-
-app.mount(
-    "/uploads",
-    StaticFiles(directory=settings.upload_dir),
-    name="uploads",
+app.add_middleware(
+    PublicWidgetCorsMiddleware
 )
 
 
@@ -270,6 +283,7 @@ app.mount(
 #
 # Internally the production/minified component is served.
 #
+
 
 @app.get("/components/msi-ads-component.js")
 async def serve_msi_ads_component():
@@ -313,6 +327,7 @@ app.include_router(stats.router)
 # STARTUP
 # ============================================================
 
+
 @app.on_event("startup")
 def bootstrap_admin():
     db = SessionLocal()
@@ -343,6 +358,7 @@ def bootstrap_admin():
 # ============================================================
 # HEALTH CHECK
 # ============================================================
+
 
 @app.get("/api/health")
 def health():

@@ -15,9 +15,9 @@ class Settings(BaseSettings):
     # each vendor's allowed browser origins are controlled per-vendor instead,
     # via Vendor.allowed_domains, because the set of vendor domains is dynamic
     # and unknown at deploy time.
-    cors_origins: str = "https://tfe-ads-dashboard.onrender.com/"
+    cors_origins: str = "http://localhost:3000"
     upload_dir: str = "uploads"
-    public_base_url: str = "https://tfe-ads-dashboard.onrender.com/"
+    public_base_url: str = "http://localhost:8000"
 
     class Config:
         env_file = ".env"
