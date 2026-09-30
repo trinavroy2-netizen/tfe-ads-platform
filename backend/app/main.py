@@ -15,25 +15,44 @@ from .routers import auth, vendors, placements, ads, upload, public, stats
 from .routers.public import _domain_allowed
 
 
+# ============================================================
+# DATABASE
+# ============================================================
+
 Base.metadata.create_all(bind=engine)
 
 
 def _run_startup_migrations():
-    """Additive, idempotent column migrations so existing production data
-    (e.g. an already-deployed ToolsForEngineers vendor) is never dropped.
-    For anything beyond simple additive columns, introduce Alembic."""
+    """
+    Additive, idempotent column migrations.
+
+    Existing production data is preserved.
+    For anything beyond simple additive columns, use Alembic.
+    """
     with engine.connect() as conn:
         try:
             conn.exec_driver_sql(
-                "ALTER TABLE placements ADD COLUMN IF NOT EXISTS description VARCHAR DEFAULT ''"
+                """
+                ALTER TABLE placements
+                ADD COLUMN IF NOT EXISTS description VARCHAR DEFAULT ''
+                """
             )
             conn.commit()
-        except Exception as e:  # pragma: no cover - best effort, e.g. on SQLite in tests
-            print(f"[migrations] skipped (non-Postgres or already applied): {e}")
+
+        except Exception as e:
+            # Best effort for SQLite/tests or already-applied migrations.
+            print(
+                f"[migrations] skipped "
+                f"(non-Postgres or already applied): {e}"
+            )
 
 
 _run_startup_migrations()
 
+
+# ============================================================
+# FASTAPI APPLICATION
+# ============================================================
 
 app = FastAPI(
     title="MSI Universal Ads Platform API",
@@ -41,7 +60,16 @@ app = FastAPI(
 )
 
 
-# --- Admin/dashboard CORS: a small, explicit allowlist only. No wildcard. ---
+# ============================================================
+# ADMIN / DASHBOARD CORS
+# ============================================================
+#
+# This CORS configuration is for the MSI Ads Dashboard and
+# other explicitly configured administrative frontends.
+#
+# Vendor website CORS is handled dynamically below.
+#
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
@@ -51,35 +79,73 @@ app.add_middleware(
 )
 
 
+# ============================================================
+# DYNAMIC PUBLIC WIDGET CORS
+# ============================================================
+
 class PublicWidgetCorsMiddleware(BaseHTTPMiddleware):
     """
-    Per-vendor CORS for /api/public/* (the widget-facing API).
+    Dynamic per-vendor CORS for /api/public/*.
 
-    This is intentionally NOT a blanket allow-all: a vendor's browser origin
-    is only echoed back (making the response readable by that vendor's page)
-    when it matches that specific vendor's configured allowed_domains.
+    Vendor domains are NOT hardcoded here.
 
-    The vendor slug for GET /api/public/ads is in the query string, so we can
-    check it before the request even reaches the route.
+    The requesting browser Origin is checked against the
+    vendor's configured `allowed_domains`.
 
-    A vendor with no allowed_domains configured yet is left open for initial
-    testing (see Vendor.allowed_domains) - the route handler enforces the same
-    rule again (and additionally requires the vendor's API key), so this
-    middleware is a fast, browser-facing layer on top of that authoritative
-    check, not a replacement for it.
+    Example:
+
+        Vendor:
+            toolsforengineers
+
+        allowed_domains:
+            https://toolsforengineers.com
+            https://www.toolsforengineers.com
+            http://localhost:5500
+            http://127.0.0.1:5500
+
+    Browser:
+
+        Origin:
+            http://127.0.0.1:5500
+
+    Request:
+
+        /api/public/ads?vendor=toolsforengineers&placement=homepage
+
+    If the origin is configured for that vendor, the middleware
+    returns:
+
+        Access-Control-Allow-Origin:
+            http://127.0.0.1:5500
+
+    This means every vendor can have its own allowed domains
+    without modifying or redeploying the backend code.
     """
 
     async def dispatch(self, request: Request, call_next):
+        # --------------------------------------------------------
+        # Only handle public/widget API routes.
+        # --------------------------------------------------------
+
         if not request.url.path.startswith("/api/public/"):
             return await call_next(request)
 
         origin = request.headers.get("origin")
+        vendor_slug = request.query_params.get("vendor")
+
         allow_this_origin = False
 
-        vendor_slug = request.query_params.get("vendor")
+        # --------------------------------------------------------
+        # GET /api/public/ads
+        #
+        # Vendor is identified using:
+        #
+        # ?vendor=toolsforengineers
+        # --------------------------------------------------------
 
         if origin and vendor_slug:
             db = SessionLocal()
+
             try:
                 vendor = (
                     db.query(models.Vendor)
@@ -88,29 +154,68 @@ class PublicWidgetCorsMiddleware(BaseHTTPMiddleware):
                 )
 
                 if vendor:
-                    allow_this_origin = _domain_allowed(vendor, request)
+                    try:
+                        allow_this_origin = _domain_allowed(
+                            vendor,
+                            request,
+                        )
+                    except Exception as e:
+                        print(
+                            "[cors] Domain validation error: "
+                            f"{e}"
+                        )
+                        allow_this_origin = False
+
             finally:
                 db.close()
 
+        # --------------------------------------------------------
+        # Other public endpoints
+        #
+        # Example:
+        #
+        # POST /api/public/track
+        #
+        # These endpoints may identify the vendor using the
+        # request body/ad_id rather than the query string.
+        #
+        # The actual route performs the authoritative validation.
+        # --------------------------------------------------------
+
         elif origin and not vendor_slug:
-            # e.g. POST /api/public/track, which identifies the vendor via the
-            # ad_id in its body rather than a query param. The route itself
-            # re-validates the domain against that ad's vendor; here we just
-            # let the response through so the browser can read the result of
-            # that check (a 403 is only useful to JS if CORS lets it through).
             allow_this_origin = True
+
+        # --------------------------------------------------------
+        # Handle browser CORS preflight.
+        #
+        # The browser sends OPTIONS before the actual GET/POST
+        # when custom headers such as X-API-Key are involved.
+        # --------------------------------------------------------
 
         if request.method == "OPTIONS":
             response = Response(status_code=204)
+
         else:
             response = await call_next(request)
 
+        # --------------------------------------------------------
+        # Add dynamic CORS headers only when the vendor/domain
+        # is allowed.
+        # --------------------------------------------------------
+
         if origin and allow_this_origin:
             response.headers["Access-Control-Allow-Origin"] = origin
+
             response.headers["Vary"] = "Origin"
+
+            response.headers["Access-Control-Allow-Credentials"] = (
+                "false"
+            )
+
             response.headers["Access-Control-Allow-Headers"] = (
                 "Content-Type, X-API-Key"
             )
+
             response.headers["Access-Control-Allow-Methods"] = (
                 "GET, POST, OPTIONS"
             )
@@ -118,10 +223,14 @@ class PublicWidgetCorsMiddleware(BaseHTTPMiddleware):
         return response
 
 
+# Register dynamic widget CORS middleware.
 app.add_middleware(PublicWidgetCorsMiddleware)
 
 
-# --- Static uploads ---
+# ============================================================
+# STATIC UPLOADS
+# ============================================================
+
 app.mount(
     "/uploads",
     StaticFiles(directory=settings.upload_dir),
@@ -129,11 +238,17 @@ app.mount(
 )
 
 
-# --- Universal MSI Ads Component ---
-# Keep the public URL unchanged:
+# ============================================================
+# UNIVERSAL MSI ADS COMPONENT
+# ============================================================
+#
+# Public URL remains:
+#
 # /components/msi-ads-component.js
 #
-# Internally serve the minified production file.
+# Internally the production/minified component is served.
+#
+
 @app.get("/components/msi-ads-component.js")
 async def serve_msi_ads_component():
     component_file = (
@@ -159,6 +274,10 @@ async def serve_msi_ads_component():
     )
 
 
+# ============================================================
+# API ROUTERS
+# ============================================================
+
 app.include_router(auth.router)
 app.include_router(vendors.router)
 app.include_router(placements.router)
@@ -168,15 +287,22 @@ app.include_router(public.router)
 app.include_router(stats.router)
 
 
+# ============================================================
+# STARTUP
+# ============================================================
+
 @app.on_event("startup")
 def bootstrap_admin():
     db = SessionLocal()
 
     try:
+        # Create default admin only when no users exist.
         if not db.query(models.User).first():
             admin = models.User(
                 email=settings.admin_email,
-                hashed_password=hash_password(settings.admin_password),
+                hashed_password=hash_password(
+                    settings.admin_password
+                ),
                 role=models.UserRole.admin,
             )
 
@@ -184,7 +310,7 @@ def bootstrap_admin():
             db.commit()
 
             print(
-                f"[bootstrap] Created default admin user: "
+                "[bootstrap] Created default admin user: "
                 f"{settings.admin_email}"
             )
 
@@ -192,6 +318,12 @@ def bootstrap_admin():
         db.close()
 
 
+# ============================================================
+# HEALTH CHECK
+# ============================================================
+
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok"
+    }
