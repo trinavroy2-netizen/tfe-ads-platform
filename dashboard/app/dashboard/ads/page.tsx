@@ -446,103 +446,94 @@ export default function AdsPage() {
       </main>
 
       {/* Ad Form Modal */}
-      {showForm && placements.length > 0 && (
-        <div
-          className="
-            fixed
-            inset-0
-            z-[100]
-            flex
-            items-start
-            justify-center
-            overflow-y-auto
-            bg-black/70
-            px-3
-            py-6
-            backdrop-blur-[2px]
-            sm:px-5
-            sm:py-8
-          "
-          role="dialog"
-          aria-modal="true"
-          aria-label={
-            editingAd
-              ? "Edit advertisement"
-              : "Create advertisement"
-          }
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              closeForm();
-            }
-          }}
-        >
-          <div
-            className="
-              relative
-              w-full
-              max-w-3xl
-              rounded-md
-              border
-              border-[var(--admin-border)]
-              bg-[var(--admin-background,#111111)]
-              shadow-[0_20px_60px_rgba(0,0,0,0.55)]
-            "
-            onMouseDown={(e) =>
-              e.stopPropagation()
-            }
-          >
-            {/* Modal close button */}
-            <button
-              type="button"
-              title="Close"
-              aria-label="Close"
-              className="
-                absolute
-                right-3
-                top-3
-                z-20
-                flex
-                h-7
-                w-7
-                items-center
-                justify-center
-                rounded
-                border
-                border-[var(--admin-border)]
-                bg-[var(--admin-surface)]
-                text-[var(--admin-muted)]
-                transition-colors
-                hover:bg-[var(--admin-surface-hover)]
-                hover:text-[var(--admin-foreground)]
-              "
-              onClick={closeForm}
-            >
-              <X
-                size={14}
-                strokeWidth={1.8}
-              />
-            </button>
+{/* Ad Form Modal */}
+{showForm && placements.length > 0 && (
+  <div
+    className="
+      fixed
+      inset-0
+      z-[100]
+      flex
+      items-center
+      justify-center
+      bg-black/70
+      px-4
+      py-6
+      backdrop-blur-[2px]
+    "
+    role="dialog"
+    aria-modal="true"
+    aria-label={
+      editingAd
+        ? "Edit advertisement"
+        : "Create advertisement"
+    }
+    onMouseDown={(e) => {
+      if (e.target === e.currentTarget) {
+        closeForm();
+      }
+    }}
+  >
+    <div
+      className="
+        relative
+        w-full
+        max-w-[1100px]
+        rounded-md
+        bg-[var(--admin-background,#111111)]
+        shadow-[0_20px_60px_rgba(0,0,0,0.55)]
+      "
+      onMouseDown={(e) =>
+        e.stopPropagation()
+      }
+    >
+      {/* Close */}
+      <button
+        type="button"
+        title="Close"
+        aria-label="Close"
+        className="
+          absolute
+          right-3
+          top-3
+          z-20
+          flex
+          h-7
+          w-7
+          items-center
+          justify-center
+          rounded
+          text-[var(--admin-muted)]
+          transition-colors
+          hover:bg-[var(--admin-surface-hover)]
+          hover:text-[var(--admin-foreground)]
+        "
+        onClick={closeForm}
+      >
+        <X
+          size={14}
+          strokeWidth={1.8}
+        />
+      </button>
 
-            {/* Existing AdForm UI */}
-            <div className="p-2 sm:p-3">
-              <AdForm
-                key={
-                  editingAd
-                    ? `edit-${editingAd.id}`
-                    : "new-ad"
-                }
-                placements={placements}
-                editingAd={editingAd}
-                onSaved={() => {
-                  closeForm();
-                  load();
-                }}
-                onCancel={closeForm}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Existing AdForm */}
+      <AdForm
+        key={
+          editingAd
+            ? `edit-${editingAd.id}`
+            : "new-ad"
+        }
+        placements={placements}
+        editingAd={editingAd}
+        onSaved={() => {
+          closeForm();
+          load();
+        }}
+        onCancel={closeForm}
+      />
+    </div>
+  </div>
+)}
     </>
   );
 }
