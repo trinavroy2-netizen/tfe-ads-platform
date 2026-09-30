@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -9,6 +10,7 @@ import {
   RefreshCw,
   TrendingUp,
   Users,
+  type LucideIcon,
 } from "lucide-react";
 
 import {
@@ -101,21 +103,15 @@ export default function AnalyticsPage() {
   }, [loadAnalytics]);
 
   function vendorForPlacement(placementId: string) {
-    const placement = placements.find(
-      (p) => p.id === placementId
-    );
+    const placement = placements.find((p) => p.id === placementId);
 
     return (
-      vendors.find(
-        (v) => v.id === placement?.vendor_id
-      )?.name || "—"
+      vendors.find((v) => v.id === placement?.vendor_id)?.name || "—"
     );
   }
 
   function placementName(id: string) {
-    return (
-      placements.find((p) => p.id === id)?.name || "—"
-    );
+    return placements.find((p) => p.id === id)?.name || "—";
   }
 
   const totalImpressions =
@@ -846,10 +842,7 @@ function MetricCard({
   value,
   description,
 }: {
-  icon: React.ComponentType<{
-    size?: number;
-    strokeWidth?: number;
-  }>;
+  icon: LucideIcon;
   label: string;
   value: string;
   description: string;
@@ -888,10 +881,7 @@ function MiniMetric({
   label,
   value,
 }: {
-  icon: React.ComponentType<{
-    size?: number;
-    strokeWidth?: number;
-  }>;
+  icon: LucideIcon;
   label: string;
   value: string | number;
 }) {
