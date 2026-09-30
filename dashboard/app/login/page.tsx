@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { API_BASE, setToken } from "@/lib/api";
-import AdsComponent from "@/components/AdsComponent";
-
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,7 +27,7 @@ export default function LoginPage() {
       }
       const data = await res.json();
       setToken(data.access_token);
-      router.push("/dashboard/ads");
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Login failed");
     } finally {
@@ -41,8 +39,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center">
       <form onSubmit={handleSubmit} className="card w-full max-w-sm space-y-4">
         <div>
-          <h1 className="text-xl font-semibold">TFE Ads Dashboard</h1>
-          <p className="text-sm text-gray-400">Sign in to manage advertising placements</p>
+          <h1 className="text-xl font-semibold">MSI Ads Platform</h1>
+          <p className="text-sm text-gray-400">Sign in to manage vendors, placements &amp; ads</p>
         </div>
         {error && <p className="text-sm text-red-400">{error}</p>}
         <div>

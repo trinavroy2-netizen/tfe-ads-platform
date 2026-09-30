@@ -1,25 +1,58 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { api, Placement, Vendor } from "@/lib/api";
+import {
+  ChevronDown,
+  ChevronUp,
+  Ruler,
+  Trash2,
+} from "lucide-react";
 
 const emptyForm = {
   vendor_id: "",
   name: "",
   slug: "",
+  description: "",
   desktop_width: 1320,
   desktop_height: 300,
-  tablet_height: 175,
-  mobile_height: 80,
+  tablet_height: 260,
+  mobile_height: 220,
 };
+
+const inputClass = `
+  w-full
+  !h-8
+  !px-2.5
+  !text-[11px]
+  focus:!border-white
+  focus:!ring-1
+  focus:!ring-white/40
+  focus:!shadow-[0_0_8px_rgba(255,255,255,0.12)]
+  focus:!outline-none
+`;
+
+const iconButtonClass = `
+  flex h-6 w-6
+  items-center justify-center
+  rounded
+  text-[var(--admin-muted)]
+  transition-colors
+  hover:bg-red-500/10
+  hover:text-red-500
+`;
 
 export default function PlacementsPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
+
+  // Responsive dimensions are hidden by default.
+  const [showDimensions, setShowDimensions] =
+    useState(false);
 
   async function load() {
     setLoading(true);
@@ -39,8 +72,6 @@ export default function PlacementsPage() {
           vendor_id: v[0].id,
         }));
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to load placements.");
     } finally {
       setLoading(false);
     }
@@ -52,7 +83,9 @@ export default function PlacementsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleCreate(e: React.FormEvent) {
+  async function handleCreate(
+    e: React.FormEvent
+  ) {
     e.preventDefault();
     setError("");
 
@@ -67,10 +100,13 @@ export default function PlacementsPage() {
         vendor_id: form.vendor_id,
       });
 
-      await load();
+      // Keep dimensions collapsed after creation.
+      setShowDimensions(false);
+
+      load();
     } catch (err: any) {
       setError(
-        err.message || "Failed to create placement."
+        err?.message || "Unable to create placement."
       );
     }
   }
@@ -84,10 +120,10 @@ export default function PlacementsPage() {
         }
       );
 
-      await load();
+      load();
     } catch (err: any) {
       setError(
-        err.message || "Failed to update placement."
+        err?.message || "Unable to update placement."
       );
     }
   }
@@ -106,183 +142,280 @@ export default function PlacementsPage() {
         `/api/admin/placements/${id}`
       );
 
-      await load();
+      load();
     } catch (err: any) {
       setError(
-        err.message || "Failed to delete placement."
+        err?.message || "Unable to delete placement."
       );
     }
   }
 
   function vendorName(id: string) {
     return (
-      vendors.find((v) => v.id === id)?.name || "—"
+      vendors.find((v) => v.id === id)?.name ||
+      "—"
     );
   }
 
   return (
-    <div className="min-h-full bg-[#111111] text-white">
-
-      {/* PAGE HEADER */}
-      <div className="mb-8">
-        <h1 className="text-[28px] font-semibold tracking-tight">
+    <main className="admin-page !w-full !max-w-none !px-4 !py-4 sm:!px-5 lg:!px-6">
+      {/* =====================================================
+          HEADER
+          ===================================================== */}
+      <div className="mb-4 w-full">
+        <h1 className="admin-title !text-lg">
           Placements
         </h1>
 
-        <p className="mt-2 max-w-3xl text-sm text-[#999]">
-          A placement is an advertising slot on a vendor's
-          website. Configure responsive dimensions for
-          desktop, tablet, and mobile screens.
+        <p className="admin-description mt-0.5 max-w-3xl !text-[11px] !leading-4">
+          A slot on a vendor&apos;s site — e.g.
+          Homepage, Hydro Dashboard, Solar Dashboard —
+          with its own responsive dimensions.
         </p>
       </div>
 
-      {/* ERROR MESSAGE */}
-      {error && (
-        <div className="mb-6 rounded-md border border-red-900/60 bg-red-950/30 px-4 py-3 text-sm text-red-300">
-          {error}
-        </div>
-      )}
-
-      {/* NO VENDOR */}
+      {/* =====================================================
+          ADD PLACEMENT
+          ===================================================== */}
       {vendors.length === 0 ? (
-        <section className="mb-8 rounded-md border border-[#303030] bg-[#1c1c1c]">
-          <div className="px-5 py-8 text-center">
-            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-[#3a3a3a] bg-[#151515]">
-              <span className="text-lg text-[#777]">
-                +
-              </span>
-            </div>
-
-            <h2 className="text-sm font-medium text-white">
-              No vendors available
-            </h2>
-
-            <p className="mt-1 text-xs text-[#777]">
-              Add a vendor first before creating a
-              placement.
-            </p>
-          </div>
-        </section>
+        <div className="admin-card mb-4 !w-full !p-3">
+          <p className="text-[10px] text-[var(--admin-muted)]">
+            Add a vendor first before creating
+            placements.
+          </p>
+        </div>
       ) : (
-        /* CREATE PLACEMENT */
-        <section className="mb-8 rounded-md border border-[#303030] bg-[#1c1c1c]">
-
-          {/* CARD HEADER */}
-          <div className="border-b border-[#303030] px-5 py-4">
-            <h2 className="text-[15px] font-semibold">
-              Create Placement
+        <form
+          onSubmit={handleCreate}
+          className="admin-card mb-4 !w-full !p-3"
+        >
+          <div className="mb-2.5">
+            <h2 className="text-[11px] font-medium text-[var(--admin-foreground)]">
+              Add placement
             </h2>
 
-            <p className="mt-1 text-xs text-[#777]">
-              Configure an advertising slot and its
-              responsive dimensions.
+            <p className="mt-0.5 text-[10px] leading-4 text-[var(--admin-muted)]">
+              Create a responsive ad slot and define
+              its display settings.
             </p>
           </div>
 
-          <form
-            onSubmit={handleCreate}
-            className="p-5"
-          >
-            {/* BASIC INFORMATION */}
-            <div className="mb-6">
-              <h3 className="mb-4 text-xs font-semibold uppercase tracking-wide text-[#777]">
-                Basic Information
-              </h3>
+          {/* =================================================
+              MAIN FIELDS
+              ================================================= */}
+          <div className="grid grid-cols-1 items-end gap-2.5 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
+            {/* Vendor */}
+            <div className="min-w-0">
+              <label
+                htmlFor="placement-vendor"
+                className="mb-1 block text-[10px] font-medium text-[var(--admin-foreground)]"
+              >
+                Vendor
+              </label>
 
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-
-                {/* VENDOR */}
-                <div>
-                  <label className="mb-2 block text-xs font-medium text-[#aaa]">
-                    Vendor
-                  </label>
-
-                  <select
-                    value={form.vendor_id}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        vendor_id: e.target.value,
-                      })
-                    }
-                    className="h-10 w-full rounded-md border border-[#3a3a3a] bg-[#151515] px-3 text-sm text-white outline-none transition focus:border-[#777]"
+              <select
+                id="placement-vendor"
+                value={form.vendor_id}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    vendor_id: e.target.value,
+                  })
+                }
+                className={inputClass}
+              >
+                {vendors.map((v) => (
+                  <option
+                    key={v.id}
+                    value={v.id}
                   >
-                    {vendors.map((v) => (
-                      <option
-                        key={v.id}
-                        value={v.id}
-                      >
-                        {v.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* NAME */}
-                <div>
-                  <label className="mb-2 block text-xs font-medium text-[#aaa]">
-                    Placement name
-                  </label>
-
-                  <input
-                    value={form.name}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        name: e.target.value,
-                      })
-                    }
-                    placeholder="Homepage"
-                    required
-                    className="h-10 w-full rounded-md border border-[#3a3a3a] bg-[#151515] px-3 text-sm text-white outline-none transition placeholder:text-[#666] focus:border-[#777]"
-                  />
-                </div>
-
-                {/* SLUG */}
-                <div>
-                  <label className="mb-2 block text-xs font-medium text-[#aaa]">
-                    Slug
-                  </label>
-
-                  <input
-                    value={form.slug}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        slug: e.target.value,
-                      })
-                    }
-                    placeholder="homepage"
-                    required
-                    className="h-10 w-full rounded-md border border-[#3a3a3a] bg-[#151515] px-3 text-sm text-white outline-none transition placeholder:text-[#666] focus:border-[#777]"
-                  />
-                </div>
-              </div>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* RESPONSIVE DIMENSIONS */}
-            <div className="border-t border-[#303030] pt-6">
-              <div className="mb-4">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-[#777]">
-                  Responsive Dimensions
-                </h3>
+            {/* Name */}
+            <div className="min-w-0">
+              <label
+                htmlFor="placement-name"
+                className="mb-1 block text-[10px] font-medium text-[var(--admin-foreground)]"
+              >
+                Name
+              </label>
 
-                <p className="mt-1 text-xs text-[#666]">
-                  Define the size of the advertising slot
-                  for different screen sizes.
-                </p>
-              </div>
+              <input
+                id="placement-name"
+                value={form.name}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    name: e.target.value,
+                  })
+                }
+                placeholder="Homepage"
+                required
+                className={inputClass}
+              />
+            </div>
 
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+            {/* Slug */}
+            <div className="min-w-0">
+              <label
+                htmlFor="placement-slug"
+                className="mb-1 block text-[10px] font-medium text-[var(--admin-foreground)]"
+              >
+                Slug
+              </label>
 
-                {/* DESKTOP WIDTH */}
-                <div>
-                  <label className="mb-2 block text-xs font-medium text-[#aaa]">
-                    Desktop width
-                  </label>
+              <input
+                id="placement-slug"
+                value={form.slug}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    slug: e.target.value,
+                  })
+                }
+                placeholder="homepage"
+                required
+                className={inputClass}
+              />
+            </div>
 
-                  <div className="relative">
+            {/* Add button */}
+            <div className="flex h-8 items-end">
+              <button
+                type="submit"
+                className="
+                  admin-button
+                  admin-button-primary
+                  !h-8
+                  !whitespace-nowrap
+                  !px-3
+                  !py-1
+                  !text-[11px]
+                "
+              >
+                Add placement
+              </button>
+            </div>
+          </div>
+
+          {/* =================================================
+              DESCRIPTION
+              ================================================= */}
+          <div className="mt-2.5">
+            <label
+              htmlFor="placement-description"
+              className="mb-1 block text-[10px] font-medium text-[var(--admin-foreground)]"
+            >
+              Description
+              <span className="ml-1 font-normal text-[var(--admin-muted)]">
+                (optional)
+              </span>
+            </label>
+
+            <input
+              id="placement-description"
+              value={form.description}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  description: e.target.value,
+                })
+              }
+              placeholder="e.g. Banner above the engineering fields grid"
+              className={inputClass}
+            />
+          </div>
+
+          {/* =================================================
+              DIMENSIONS TOGGLE
+              ================================================= */}
+          <div className="mt-2.5 border-t border-[var(--admin-border)] pt-2.5">
+            <button
+              type="button"
+              onClick={() =>
+                setShowDimensions(
+                  (current) => !current
+                )
+              }
+              className="
+                flex
+                w-full
+                items-center
+                justify-between
+                rounded-md
+                border
+                border-[var(--admin-border)]
+                bg-[var(--admin-surface-hover)]
+                px-2.5
+                py-2
+                text-left
+                transition-colors
+                hover:bg-[var(--admin-surface)]
+              "
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-[var(--admin-border)] bg-[var(--admin-surface)]">
+                  <Ruler
+                    size={12}
+                    strokeWidth={1.7}
+                    className="text-[var(--admin-foreground)]"
+                  />
+                </span>
+
+                <span className="min-w-0">
+                  <span className="block text-[10px] font-medium text-[var(--admin-foreground)]">
+                    Responsive dimensions
+                  </span>
+
+                  <span className="mt-0.5 block text-[9px] text-[var(--admin-muted)]">
+                    Configure desktop, tablet and mobile
+                    ad heights.
+                  </span>
+                </span>
+              </span>
+
+              <span className="ml-3 flex h-6 w-6 shrink-0 items-center justify-center rounded text-[var(--admin-muted)]">
+                {showDimensions ? (
+                  <ChevronUp
+                    size={14}
+                    strokeWidth={1.8}
+                  />
+                ) : (
+                  <ChevronDown
+                    size={14}
+                    strokeWidth={1.8}
+                  />
+                )}
+              </span>
+            </button>
+
+            {/* =================================================
+                DIMENSIONS — HIDDEN BY DEFAULT
+                ================================================= */}
+            {showDimensions && (
+              <div className="mt-2.5 rounded-md border border-[var(--admin-border)] bg-[var(--admin-surface-hover)] p-2.5">
+                <div className="mb-2 text-[9px] text-[var(--admin-muted)]">
+                  Default dimensions are pre-filled. You
+                  can change them if this placement has
+                  different vendor requirements.
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {/* Desktop Width */}
+                  <div className="min-w-0">
+                    <label
+                      htmlFor="desktop-width"
+                      className="mb-1 block text-[9px] text-[var(--admin-muted)]"
+                    >
+                      Desktop width (px)
+                    </label>
+
                     <input
+                      id="desktop-width"
                       type="number"
                       min="1"
                       value={form.desktop_width}
@@ -290,30 +423,26 @@ export default function PlacementsPage() {
                         setForm({
                           ...form,
                           desktop_width:
-                            Number(e.target.value),
+                            Number(
+                              e.target.value
+                            ),
                         })
                       }
-                      className="h-10 w-full rounded-md border border-[#3a3a3a] bg-[#151515] px-3 pr-12 text-sm text-white outline-none transition focus:border-[#777]"
+                      className={inputClass}
                     />
-
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#666]">
-                      px
-                    </span>
                   </div>
 
-                  <p className="mt-1.5 text-[11px] text-[#555]">
-                    Base banner width
-                  </p>
-                </div>
+                  {/* Desktop Height */}
+                  <div className="min-w-0">
+                    <label
+                      htmlFor="desktop-height"
+                      className="mb-1 block text-[9px] text-[var(--admin-muted)]"
+                    >
+                      Desktop height (px)
+                    </label>
 
-                {/* DESKTOP HEIGHT */}
-                <div>
-                  <label className="mb-2 block text-xs font-medium text-[#aaa]">
-                    Desktop height
-                  </label>
-
-                  <div className="relative">
                     <input
+                      id="desktop-height"
                       type="number"
                       min="1"
                       value={form.desktop_height}
@@ -321,30 +450,26 @@ export default function PlacementsPage() {
                         setForm({
                           ...form,
                           desktop_height:
-                            Number(e.target.value),
+                            Number(
+                              e.target.value
+                            ),
                         })
                       }
-                      className="h-10 w-full rounded-md border border-[#3a3a3a] bg-[#151515] px-3 pr-12 text-sm text-white outline-none transition focus:border-[#777]"
+                      className={inputClass}
                     />
-
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#666]">
-                      px
-                    </span>
                   </div>
 
-                  <p className="mt-1.5 text-[11px] text-[#555]">
-                    1320 × 300 recommended
-                  </p>
-                </div>
+                  {/* Tablet Height */}
+                  <div className="min-w-0">
+                    <label
+                      htmlFor="tablet-height"
+                      className="mb-1 block text-[9px] text-[var(--admin-muted)]"
+                    >
+                      Tablet height ≤900px
+                    </label>
 
-                {/* TABLET */}
-                <div>
-                  <label className="mb-2 block text-xs font-medium text-[#aaa]">
-                    Tablet height
-                  </label>
-
-                  <div className="relative">
                     <input
+                      id="tablet-height"
                       type="number"
                       min="1"
                       value={form.tablet_height}
@@ -352,30 +477,26 @@ export default function PlacementsPage() {
                         setForm({
                           ...form,
                           tablet_height:
-                            Number(e.target.value),
+                            Number(
+                              e.target.value
+                            ),
                         })
                       }
-                      className="h-10 w-full rounded-md border border-[#3a3a3a] bg-[#151515] px-3 pr-12 text-sm text-white outline-none transition focus:border-[#777]"
+                      className={inputClass}
                     />
-
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#666]">
-                      px
-                    </span>
                   </div>
 
-                  <p className="mt-1.5 text-[11px] text-[#555]">
-                    Screens ≤ 900px · Recommended 175px
-                  </p>
-                </div>
+                  {/* Mobile Height */}
+                  <div className="min-w-0">
+                    <label
+                      htmlFor="mobile-height"
+                      className="mb-1 block text-[9px] text-[var(--admin-muted)]"
+                    >
+                      Mobile height ≤650px
+                    </label>
 
-                {/* MOBILE */}
-                <div>
-                  <label className="mb-2 block text-xs font-medium text-[#aaa]">
-                    Mobile height
-                  </label>
-
-                  <div className="relative">
                     <input
+                      id="mobile-height"
                       type="number"
                       min="1"
                       value={form.mobile_height}
@@ -383,238 +504,234 @@ export default function PlacementsPage() {
                         setForm({
                           ...form,
                           mobile_height:
-                            Number(e.target.value),
+                            Number(
+                              e.target.value
+                            ),
                         })
                       }
-                      className="h-10 w-full rounded-md border border-[#3a3a3a] bg-[#151515] px-3 pr-12 text-sm text-white outline-none transition focus:border-[#777]"
+                      className={inputClass}
                     />
-
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#666]">
-                      px
-                    </span>
                   </div>
-
-                  <p className="mt-1.5 text-[11px] text-[#555]">
-                    Screens ≤ 650px · Recommended 80px
-                  </p>
                 </div>
               </div>
-            </div>
+            )}
+          </div>
 
-            {/* FOOTER */}
-            <div className="mt-6 flex flex-col gap-3 border-t border-[#303030] pt-5 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-[#666]">
-                The placement dimensions can be changed
-                later.
-              </p>
-
-              <button
-                type="submit"
-                className="h-10 rounded-md border border-[#444] bg-[#f1f1f1] px-5 text-sm font-medium text-[#111] transition hover:bg-white"
-              >
-                Add placement
-              </button>
-            </div>
-          </form>
-        </section>
+          {/* Error */}
+          {error && (
+            <p className="mt-2 text-[10px] text-red-500">
+              {error}
+            </p>
+          )}
+        </form>
       )}
 
-      {/* PLACEMENTS LIST */}
-      <section className="overflow-hidden rounded-md border border-[#303030] bg-[#1c1c1c]">
+      {/* =====================================================
+          PLACEMENT LIST
+          ===================================================== */}
+      <section className="w-full">
+        <div className="mb-2">
+          <h2 className="text-[11px] font-medium text-[var(--admin-foreground)]">
+            Placement list
+          </h2>
 
-        {/* HEADER */}
-        <div className="flex flex-col gap-3 border-b border-[#303030] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-[15px] font-semibold">
-              Placements
-            </h2>
-
-            <p className="mt-1 text-xs text-[#777]">
-              Manage your advertising slots and responsive
-              dimensions.
-            </p>
-          </div>
-
-          <div className="text-xs text-[#777]">
-            {placements.length}{" "}
-            {placements.length === 1
-              ? "placement"
-              : "placements"}
-          </div>
+          <p className="mt-0.5 text-[10px] leading-4 text-[var(--admin-muted)]">
+            Manage placement dimensions and active
+            status for each vendor.
+          </p>
         </div>
 
-        {/* TABLE */}
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] border-collapse">
+        <div className="admin-table-card !w-full !max-w-none overflow-hidden">
+          <div className="w-full">
+            <table className="admin-table !w-full table-fixed !text-[10px]">
+              <colgroup>
+                <col className="w-[16%]" />
+                <col className="w-[16%]" />
+                <col className="w-[18%]" />
+                <col className="w-[12%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+                <col className="w-[8%]" />
+              </colgroup>
 
-            <thead>
-              <tr className="border-b border-[#303030] bg-[#191919]">
-
-                <th className="px-5 py-3 text-left text-xs font-medium text-[#888]">
-                  Vendor
-                </th>
-
-                <th className="px-5 py-3 text-left text-xs font-medium text-[#888]">
-                  Name
-                </th>
-
-                <th className="px-5 py-3 text-left text-xs font-medium text-[#888]">
-                  Slug
-                </th>
-
-                <th className="px-5 py-3 text-left text-xs font-medium text-[#888]">
-                  Desktop
-                </th>
-
-                <th className="px-5 py-3 text-left text-xs font-medium text-[#888]">
-                  Tablet
-                </th>
-
-                <th className="px-5 py-3 text-left text-xs font-medium text-[#888]">
-                  Mobile
-                </th>
-
-                <th className="px-5 py-3 text-left text-xs font-medium text-[#888]">
-                  Status
-                </th>
-
-                <th className="px-5 py-3 text-right text-xs font-medium text-[#888]">
-                  Actions
-                </th>
-
-              </tr>
-            </thead>
-
-            <tbody>
-
-              {/* LOADING */}
-              {loading && (
+              {/* Table Header */}
+              <thead>
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="px-5 py-12 text-center text-sm text-[#666]"
-                  >
-                    Loading placements...
-                  </td>
-                </tr>
-              )}
+                  <th className="!px-3 !py-2 text-left">
+                    Vendor
+                  </th>
 
-              {/* EMPTY */}
-              {!loading &&
-                placements.length === 0 && (
+                  <th className="!px-3 !py-2 text-left">
+                    Name
+                  </th>
+
+                  <th className="!px-3 !py-2 text-left">
+                    Slug
+                  </th>
+
+                  <th className="!px-3 !py-2 text-left">
+                    Desktop
+                  </th>
+
+                  <th className="!px-3 !py-2 text-left">
+                    Tablet
+                  </th>
+
+                  <th className="!px-3 !py-2 text-left">
+                    Mobile
+                  </th>
+
+                  <th className="!px-3 !py-2 text-left">
+                    Status
+                  </th>
+
+                  <th className="!px-3 !py-2 text-right">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {/* Loading */}
+                {loading && (
                   <tr>
                     <td
                       colSpan={8}
-                      className="px-5 py-12 text-center"
+                      className="
+                        !px-3
+                        !py-6
+                        text-center
+                        text-[10px]
+                        text-[var(--admin-muted)]
+                      "
                     >
-                      <div className="text-sm text-[#777]">
-                        No placements found.
-                      </div>
-
-                      <div className="mt-1 text-xs text-[#555]">
-                        Create your first placement above.
-                      </div>
+                      Loading placements...
                     </td>
                   </tr>
                 )}
 
-              {/* DATA */}
-              {!loading &&
-                placements.map((p) => (
-                  <tr
-                    key={p.id}
-                    className="border-b border-[#292929] last:border-b-0 hover:bg-[#202020]"
-                  >
+                {/* Empty */}
+                {!loading &&
+                  placements.length === 0 && (
+                    <tr>
+                      <td colSpan={8}>
+                        <div className="flex flex-col items-center justify-center px-4 py-7 text-center">
+                          <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-full border border-[var(--admin-border)] bg-[var(--admin-surface)]">
+                            <Ruler
+                              size={13}
+                              strokeWidth={1.7}
+                              className="text-[var(--admin-muted)]"
+                            />
+                          </div>
 
-                    {/* VENDOR */}
-                    <td className="px-5 py-4">
-                      <div className="text-sm font-medium text-white">
+                          <p className="text-[11px] font-medium text-[var(--admin-foreground)]">
+                            No placements yet
+                          </p>
+
+                          <p className="mt-0.5 text-[10px] text-[var(--admin-muted)]">
+                            Create your first placement
+                            above to start serving
+                            advertisements.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
+                {/* Placement Rows */}
+                {placements.map((p) => (
+                  <tr key={p.id}>
+                    {/* Vendor */}
+                    <td className="!px-3 !py-2 align-top">
+                      <div className="break-words font-medium text-[var(--admin-foreground)]">
                         {vendorName(p.vendor_id)}
                       </div>
                     </td>
 
-                    {/* NAME */}
-                    <td className="px-5 py-4">
-                      <div className="text-sm text-white">
+                    {/* Name */}
+                    <td className="!px-3 !py-2 align-top">
+                      <div className="break-words font-medium text-[var(--admin-foreground)]">
                         {p.name}
                       </div>
                     </td>
 
-                    {/* SLUG */}
-                    <td className="px-5 py-4">
-                      <code className="rounded bg-[#151515] px-2 py-1 text-xs text-[#999]">
-                        {p.slug}
-                      </code>
+                    {/* Slug */}
+                    <td className="admin-table-muted !px-3 !py-2 align-top">
+                      <div className="min-w-0">
+                        <div className="break-words text-[10px]">
+                          {p.slug}
+                        </div>
+
+                        {p.description && (
+                          <div className="mt-0.5 break-words text-[9px] text-[var(--admin-muted)]">
+                            {p.description}
+                          </div>
+                        )}
+                      </div>
                     </td>
 
-                    {/* DESKTOP */}
-                    <td className="px-5 py-4">
-                      <span className="text-xs text-[#999]">
-                        {p.desktop_width}×{p.desktop_height}
-                      </span>
+                    {/* Desktop */}
+                    <td className="admin-table-muted !px-3 !py-2 align-top break-words">
+                      {p.desktop_width}×
+                      {p.desktop_height}
                     </td>
 
-                    {/* TABLET */}
-                    <td className="px-5 py-4">
-                      <span className="text-xs text-[#999]">
-                        {p.tablet_height}px
-                      </span>
+                    {/* Tablet */}
+                    <td className="admin-table-muted !px-3 !py-2 align-top break-words">
+                      {p.tablet_height}h
                     </td>
 
-                    {/* MOBILE */}
-                    <td className="px-5 py-4">
-                      <span className="text-xs text-[#999]">
-                        {p.mobile_height}px
-                      </span>
+                    {/* Mobile */}
+                    <td className="admin-table-muted !px-3 !py-2 align-top break-words">
+                      {p.mobile_height}h
                     </td>
 
-                    {/* STATUS */}
-                    <td className="px-5 py-4">
+                    {/* Status */}
+                    <td className="!px-3 !py-2 align-top">
                       <button
+                        type="button"
+                        className={`badge !px-1.5 !py-0.5 !text-[9px] ${
+                          p.is_active
+                            ? "badge-active"
+                            : "badge-inactive"
+                        }`}
                         onClick={() =>
                           toggleActive(p)
                         }
-                        className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs transition ${
-                          p.is_active
-                            ? "border-[#304735] bg-[#17221a] text-[#9fc5a5] hover:bg-[#1c2a20]"
-                            : "border-[#4a3434] bg-[#241818] text-[#c99595] hover:bg-[#302020]"
-                        }`}
                       >
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            p.is_active
-                              ? "bg-[#75a77d]"
-                              : "bg-[#a56b6b]"
-                          }`}
-                        />
-
                         {p.is_active
                           ? "Active"
                           : "Inactive"}
                       </button>
                     </td>
 
-                    {/* ACTION */}
-                    <td className="px-5 py-4">
-                      <div className="flex justify-end">
+                    {/* Actions */}
+                    <td className="!px-3 !py-2 align-top">
+                      <div className="flex items-center justify-end gap-0.5">
                         <button
+                          type="button"
+                          title="Delete placement"
+                          aria-label="Delete placement"
+                          className={iconButtonClass}
                           onClick={() =>
                             remove(p.id)
                           }
-                          className="h-8 rounded-md border border-[#4a3030] bg-[#241919] px-3 text-xs text-[#c99] transition hover:bg-[#302020]"
                         >
-                          Delete
+                          <Trash2
+                            size={13}
+                            strokeWidth={1.8}
+                          />
                         </button>
                       </div>
                     </td>
-
                   </tr>
                 ))}
-
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
-    </div>
+    </main>
   );
 }

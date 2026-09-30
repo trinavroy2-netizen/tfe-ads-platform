@@ -2,8 +2,8 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "TFE Ads Dashboard",
-  description: "Ad management dashboard for the embeddable widget platform",
+  title: "MSI Ads Platform",
+  description: "Universal multi-vendor advertising management platform",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

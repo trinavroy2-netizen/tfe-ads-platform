@@ -83,6 +83,7 @@ export interface Placement {
   vendor_id: string;
   name: string;
   slug: string;
+  description: string;
   desktop_width: number;
   desktop_height: number;
   tablet_height: number;
@@ -112,4 +113,26 @@ export interface AdStats {
   impressions: number;
   clicks: number;
   ctr: number;
+}
+
+export interface VendorSummary {
+  vendor_id: string;
+  vendor_name: string;
+  placements: number;
+  active_ads: number;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+}
+
+export interface OverviewStats {
+  total_vendors: number;
+  active_vendors: number;
+  total_placements: number;
+  total_ads: number;
+  active_ads: number;
+  total_impressions: number;
+  total_clicks: number;
+  overall_ctr: number;
+  by_vendor: VendorSummary[];
 }

@@ -1,182 +1,103 @@
-# TFE Ads Platform
+# MSI Universal Multi-Vendor Ads Platform
 
-A self-contained ad-management platform: a **Next.js dashboard** for creating and
-scheduling ads, a **FastAPI + PostgreSQL** backend, and a dependency-free
-**embeddable JS widget** that vendor sites (e.g. a PHP site like
-ToolsForEngineers.com) drop in with two lines of markup.
+MSI manages every vendor's advertising from one dashboard. Each vendor embeds
+the **same** ad component on their site with three values — vendor, placement,
+public key — and MSI controls the ads (and the component itself) centrally.
 
 ```
-Next.js Dashboard  →  FastAPI  →  PostgreSQL
-                          ↑
-                   Embeddable Widget (vanilla JS)
-                          ↑
-                  Vendor PHP Website (<div> + <script>)
+MSI Dashboard (Next.js) → FastAPI → PostgreSQL
+                              ↑
+              MSI Ads Component  (/components/msi-ads-component.js)
+                              ↑
+        Vendor A site   Vendor B site   Vendor C site   ...
 ```
 
-This build is meant to be run **standalone first, for testing**, then the three
-pieces can be integrated into your existing infrastructure independently:
-- The dashboard can be deployed as its own app, or its pages/components lifted
-  into an existing Next.js site.
-- The backend is a normal FastAPI service — deploy it anywhere you run Python.
-- The widget is one static `.js` file — host it anywhere and the vendor's PHP
-  site loads it with a `<script>` tag. It needs no Next.js runtime.
+ToolsForEngineers is simply the first vendor *record*. Nothing in the code
+branches on a vendor name.
 
----
+## Data model
+`Vendor` (name, slug, public API key, allowed domains, active) →
+`Placement` (name, slug, description, desktop/tablet/mobile dimensions, active) →
+`Ad` (image, title, alt, target URL, active, start/end, order, new-tab) →
+`AdEvent` (impression / click). Dimensions come from the placement via the API;
+the component never assumes any vendor's sizes.
 
-## 1. Quick start (local testing)
-
-Requirements: Docker + Docker Compose.
-
+## Run locally
 ```bash
-cd tfe-ads-platform/backend
-cp .env.example .env        # edit SECRET_KEY, ADMIN_EMAIL/PASSWORD before real use
-cd ..
-docker compose up --build
+cd backend && cp .env.example .env     # set SECRET_KEY / admin password
+cd .. && docker compose up --build
 ```
+Dashboard `:3000`, API `:8000` (docs at `/docs`), Postgres `:5433`.
 
-This starts:
-- **PostgreSQL** on `localhost:5433`
-- **FastAPI backend** on `http://localhost:8000` (interactive docs at `/docs`)
-- **Next.js dashboard** on `http://localhost:3000`
+First steps: **Vendors** → add vendor (set *Allowed domains*) → **Placements** →
+**Advertisements** → **Integration** (copy the snippet, live preview included).
 
-Log into the dashboard with the admin credentials from `backend/.env`
-(defaults: `admin@mahavirshree.com` / `ChangeMe123!` — **change these**).
-
-### First-time setup in the dashboard
-1. **Vendors** → add a vendor, e.g. name `ToolsForEngineers`, slug
-   `toolsforengineers`. This generates an API key.
-2. **Placements** → add one placement per ad slot on their site — e.g.
-   `Homepage`, `Hydro`, `Solar` — with the dimensions from their spec
-   (defaults already match: 1320×300 desktop / 260h tablet / 220h mobile).
-3. **Ads** → upload an ad image, set the destination link, optionally schedule
-   a start/end date, and save. It goes live immediately if active.
-
-### Testing the widget without touching PHP
-Open `widget/demo.html` directly in a browser (or `python3 -m http.server` from
-the `widget/` folder) after filling in the vendor's real API key. It talks to
-`http://localhost:8000` and renders exactly what the vendor's site will show.
-
----
-
-## 2. Architecture & data model
-
-| Table        | Purpose                                                              |
-|--------------|-----------------------------------------------------------------------|
-| `users`      | Dashboard login (admin/editor)                                       |
-| `vendors`    | A partner site embedding the widget (e.g. ToolsForEngineers), holds its API key |
-| `placements` | A specific slot on that vendor's site (Homepage / Hydro / Solar), with per-breakpoint dimensions |
-| `ads`        | An ad creative: image, destination link, active flag, schedule window, sort order |
-| `ad_events`  | Append-only impression/click log, one row per event                   |
-
-Ads are filtered server-side by `is_active` **and** the `start_at`/`end_at`
-window, so scheduling "just works" — no cron job needed, the public endpoint
-always returns only what should currently be live.
-
----
-
-## 3. API reference (summary)
-
-Full interactive docs: `http://localhost:8000/docs`
-
-**Auth**
-- `POST /api/auth/login` `{email, password}` → `{access_token}`
-- `GET /api/auth/me` (Bearer token)
-
-**Admin (all require `Authorization: Bearer <token>`)**
-- `GET/POST /api/admin/vendors`, `PATCH/DELETE /api/admin/vendors/{id}`, `POST /api/admin/vendors/{id}/rotate-key`
-- `GET/POST /api/admin/placements`, `PATCH/DELETE /api/admin/placements/{id}`
-- `GET/POST /api/admin/ads`, `GET/PATCH/DELETE /api/admin/ads/{id}`, `POST /api/admin/ads/{id}/toggle`, `GET /api/admin/ads/{id}/stats`
-- `POST /api/admin/upload` (multipart `file`) → `{url}`
-
-**Public (called by the widget, no login — gated by vendor API key)**
-- `GET /api/public/ads?vendor=<slug>&placement=<slug>` header `X-API-Key: <vendor key>`
-- `POST /api/public/track` `{ad_id, event_type: "impression"|"click"}`
-
----
-
-## 4. Vendor integration (PHP site)
-
-The vendor adds this once per ad slot, anywhere in their template:
-
+## Vendor integration (any stack)
 ```html
-<div class="tfe-ad-widget"
-     data-vendor="toolsforengineers"
-     data-placement="homepage"
-     data-api-key="THEIR_VENDOR_API_KEY"
-     data-api-base="https://ads-api.mahavirshree.com">
-</div>
+<div class="msi-ad-widget"
+     data-vendor="VENDOR_SLUG"
+     data-placement="PLACEMENT_SLUG"
+     data-api-key="VENDOR_PUBLIC_API_KEY"
+     data-api-base="https://YOUR-PRODUCTION-DOMAIN"></div>
+<script src="https://YOUR-PRODUCTION-DOMAIN/components/msi-ads-component.js" defer></script>
 ```
+One script tag serves every container on the page. See `components/vendor-demo.php`.
+Ad, schedule, image, link and dimension changes made in the dashboard reach the
+vendor's site on its next page load — no vendor-side edit.
 
-...and the widget script once per page (near the end of `<body>`, works for
-every `.tfe-ad-widget` div on the page — Homepage, Hydro, Solar all share one
-`<script>` tag):
+Behaviour: auto-rotation (`data-interval`, ms), prev/next + dots, pause on hover,
+smooth transition, images `object-fit: contain` (no crop/stretch), no horizontal
+overflow, slot sized from placement config (breakpoints 900px / 650px), works from
+320px. Impressions count once per ad per page view, only when ≥50% of the slot is
+visible; clicks are sent via `sendBeacon`. Failures render nothing.
+JS API: `MSIAdsComponent.init()`, `.refresh()`, `.destroy()` (for SPAs).
 
-```html
-<script src="https://ads-api.mahavirshree.com/widget/tfe-ad-widget.js" async></script>
-```
+## Two front-end artifacts, one contract
+- `components/msi-ads-component.js` — dependency-free script vendors load (this is
+  the production distribution; centrally hosted, so fixes reach all vendors).
+- `dashboard/components/ads/AdsComponent.tsx` (+ `AdsComponent.module.css`,
+  `adsClient.ts`, `types.ts`) — the React/TypeScript component, used for the
+  dashboard's live preview and usable directly by React/Next.js vendors
+  (`<AdsComponent vendor placement apiKey apiBase />`).
 
-See `widget/vendor-demo.php` for a full example matching their PHP stack.
+They implement the same behaviour against the same public API but are **separate
+implementations**, not one source compiled twice; change both if you change behaviour.
+I kept the vendor script framework-free deliberately: bundling React into every
+vendor page adds weight and can clash with the vendor's own React.
+Browser JavaScript is always inspectable; the goal is central control, not secrecy.
 
-**What the widget does automatically:**
-- Fetches only active, in-schedule ads for that vendor + placement
-- Auto-slides through multiple ads (right-to-left), pauses on hover
-- Resizes responsively at the 900px/650px breakpoints from their spec
-- Fires an impression once a slide is actually visible (`IntersectionObserver`), and a click event via `sendBeacon` on click
-- Fails silently (renders nothing) if the API is unreachable or no ads are active — never breaks their page
+`backend/components/` is the copy the API serves at `/components/` — keep it in sync
+with `components/` (`cp components/msi-ads-component.js backend/components/`).
 
-No new ad requires a vendor deploy: uploading/activating an ad in the
-dashboard makes it appear on their live site on the widget's next poll of
-that page load.
+## Security model
+- **Public key, not a secret.** `data-api-key` identifies the vendor; it's visible
+  in page source by design. Admin credentials/JWT secret never reach vendor sites.
+- **Allowed domains per vendor.** Origin/Referer is checked on `/api/public/ads`
+  and `/api/public/track`; `www.` variants are matched. The CORS header for the
+  public API is only returned to origins in that vendor's list (no wildcard).
+  **A vendor with an empty list is unrestricted** (for testing) — set it before go-live.
+- Requests with no Origin header (curl/server-side) are not domain-checked; the
+  key still applies. Domain checks stop casual reuse of a key on other sites, not
+  a determined attacker who can spoof headers — treat the key accordingly and rotate
+  if leaked.
+- `/api/public/track` identifies the vendor via the ad, so its CORS response is
+  permissive but the handler still enforces the domain list; tracking is not
+  rate-limited (add rate limiting at your proxy before high traffic).
+- Admin CORS (`CORS_ORIGINS`) is an explicit list of dashboard origins.
 
----
+## Dev vs production
+Copy `backend/.env.production.example`, set `ENVIRONMENT=production` (startup logs
+warnings for default secrets / localhost URLs). Set `NEXT_PUBLIC_API_BASE` for the
+dashboard build. Serve the API over HTTPS. The component has no baked-in URL; it
+warns in the console if a non-local page omits `data-api-base`.
 
-## 5. Before going to production
+## Database changes
+Additive only: `placements.description`, applied automatically on startup via
+`ALTER TABLE … ADD COLUMN IF NOT EXISTS` (Postgres). Existing vendors, ads and events
+are untouched. Introduce Alembic for any larger future change.
 
-This build is deliberately test-ready, not production-hardened out of the
-box. Before pointing it at the real ToolsForEngineers.com integration:
-
-- **Secrets**: set a strong random `SECRET_KEY` and change the default admin
-  password in `backend/.env`. Don't commit `.env`.
-- **HTTPS**: put the backend behind a reverse proxy (nginx/Caddy) with TLS —
-  the widget spec requires the embed URL to be `https://`.
-- **CORS / API key**: `CORS_ORIGINS` in `.env` should list your dashboard's
-  real domain. The widget itself isn't blocked by CORS (ads must be readable
-  cross-origin from any vendor domain), so per-vendor access is controlled by
-  the `X-API-Key` header instead — rotate a vendor's key from the dashboard if
-  it ever leaks.
-- **Auth storage**: the dashboard currently stores the JWT in `localStorage`
-  for simplicity. For production, consider moving to an httpOnly cookie set
-  by a small Next.js API route, or reuse your existing website's auth/SSO if
-  you fold these pages into your current site instead of running them
-  standalone.
-- **Next.js version**: pinned to `14.2.34` (patches the Dec 2025 RCE
-  advisories). `npm audit` will still show older transitive advisories that
-  only clear on a Next 15/16 upgrade — worth doing before production, not
-  required for local testing.
-- **Database backups / migrations**: tables are created via
-  `Base.metadata.create_all` on startup for simplicity. For real schema
-  changes going forward, introduce Alembic migrations (the dependency is
-  already in `requirements.txt`).
-- **Image storage**: uploads are saved to a local `uploads/` volume. If you
-  run multiple backend replicas, move this to S3-compatible object storage.
-
----
-
-## 6. Folder structure
-
-```
-tfe-ads-platform/
-├── backend/            FastAPI app (auth, CRUD, public widget API, uploads)
-│   └── app/
-│       ├── models.py, schemas.py, security.py, config.py, main.py
-│       └── routers/    auth.py, vendors.py, placements.py, ads.py, upload.py, public.py
-├── dashboard/          Next.js 14 + Tailwind admin dashboard
-│   ├── app/            login, dashboard/{ads,placements,vendors}
-│   ├── components/     Sidebar, AdForm
-│   └── lib/api.ts      typed fetch client
-├── widget/
-│   ├── tfe-ad-widget.js   the embeddable script (also served at /widget/... by the backend)
-│   ├── vendor-demo.php    example PHP integration
-│   └── demo.html          local browser test page
-└── docker-compose.yml  Postgres + backend + dashboard, one command
-```
+## Known follow-ups
+- Uploaded images live on local disk; use object storage for multiple replicas.
+- Dashboard JWT is in `localStorage`; consider httpOnly cookies.
+- `npm audit` still lists advisories on Next 14.2.x that clear only on a major upgrade.
+- Automated tests are not included; the flows were verified with scripted API checks.

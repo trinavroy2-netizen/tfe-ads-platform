@@ -1,13 +1,45 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  api,
-  Ad,
-  Placement,
-  AdStats,
-} from "@/lib/api";
+import { api, Ad, Placement, AdStats } from "@/lib/api";
 import AdForm from "@/components/AdForm";
+import {
+  Eye,
+  Pencil,
+  Trash2,
+} from "lucide-react";
+
+const inputClass = `
+  w-full
+  !h-8
+  !px-2.5
+  !text-[11px]
+  focus:!border-white
+  focus:!ring-1
+  focus:!ring-white/40
+  focus:!shadow-[0_0_8px_rgba(255,255,255,0.12)]
+  focus:!outline-none
+`;
+
+const iconButtonClass = `
+  flex h-6 w-6 shrink-0
+  items-center justify-center
+  rounded
+  text-[var(--admin-muted)]
+  transition-colors
+  hover:bg-[var(--admin-surface-hover)]
+  hover:text-[var(--admin-foreground)]
+`;
+
+const dangerIconButtonClass = `
+  flex h-6 w-6 shrink-0
+  items-center justify-center
+  rounded
+  text-[var(--admin-muted)]
+  transition-colors
+  hover:bg-red-500/10
+  hover:text-red-500
+`;
 
 export default function AdsPage() {
   const [placements, setPlacements] = useState<Placement[]>([]);
@@ -52,26 +84,21 @@ export default function AdsPage() {
   }
 
   async function toggle(ad: Ad) {
-    await api.post(
-      `/api/admin/ads/${ad.id}/toggle`
-    );
-
-    await load();
+    await api.post(`/api/admin/ads/${ad.id}/toggle`);
+    load();
   }
 
   async function remove(id: string) {
     if (!confirm("Delete this ad?")) return;
 
     await api.del(`/api/admin/ads/${id}`);
-
-    await load();
+    load();
   }
 
   function placementName(id: string) {
     return (
-      placements.find(
-        (p) => p.id === id
-      )?.name || "—"
+      placements.find((p) => p.id === id)?.name ||
+      "—"
     );
   }
 
@@ -83,25 +110,35 @@ export default function AdsPage() {
         );
 
   return (
-    <div className="min-h-full bg-[#111111] text-white">
-
-      {/* PAGE HEADER */}
-      <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-[28px] font-semibold tracking-tight">
+    <main className="admin-page !w-full !max-w-none !px-4 !py-4 sm:!px-5 lg:!px-6">
+      {/* Header */}
+      <div className="mb-4 flex w-full items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="admin-title !text-lg">
             Ads
           </h1>
 
-          <p className="mt-2 max-w-3xl text-sm text-[#999]">
-            Create, schedule, and activate advertisements.
-            Active ads matching their date range appear on
-            the vendor's website automatically.
+          <p className="admin-description mt-0.5 max-w-4xl !text-[11px] !leading-4">
+            Create, schedule, and activate ads. Active ads
+            matching the current date range appear on the
+            vendor&apos;s site automatically — no redeploy
+            needed on their end.
           </p>
         </div>
 
         {placements.length > 0 && !showForm && (
           <button
-            className="h-10 shrink-0 rounded-md border border-[#444] bg-[#f1f1f1] px-5 text-sm font-medium text-[#111] transition hover:bg-white"
+            type="button"
+            className="
+              admin-button
+              admin-button-primary
+              !h-8
+              !shrink-0
+              !whitespace-nowrap
+              !px-3
+              !py-1
+              !text-[11px]
+            "
             onClick={() => {
               setEditingAd(null);
               setShowForm(true);
@@ -112,49 +149,18 @@ export default function AdsPage() {
         )}
       </div>
 
-      {/* NO PLACEMENTS */}
+      {/* No placement */}
       {placements.length === 0 && (
-        <section className="mb-8 rounded-md border border-[#303030] bg-[#1c1c1c]">
-          <div className="px-5 py-10 text-center">
-
-            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-[#3a3a3a] bg-[#151515]">
-              <span className="text-lg text-[#777]">
-                +
-              </span>
-            </div>
-
-            <h2 className="text-sm font-medium text-white">
-              No placements available
-            </h2>
-
-            <p className="mt-1 text-xs text-[#777]">
-              Create a vendor and placement first before
-              creating an advertisement.
-            </p>
-
-          </div>
-        </section>
+        <div className="admin-card mb-4 !w-full !p-3">
+          <p className="text-[10px] text-[var(--admin-muted)]">
+            Create a vendor and a placement first.
+          </p>
+        </div>
       )}
 
-      {/* AD FORM */}
+      {/* Ad Form */}
       {showForm && placements.length > 0 && (
-        <section className="mb-8">
-
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-[15px] font-semibold">
-                {editingAd
-                  ? "Edit Advertisement"
-                  : "Create Advertisement"}
-              </h2>
-
-              <p className="mt-1 text-xs text-[#777]">
-                Configure the advertisement content,
-                placement and schedule.
-              </p>
-            </div>
-          </div>
-
+        <div className="mb-4 w-full">
           <AdForm
             placements={placements}
             editingAd={editingAd}
@@ -168,319 +174,278 @@ export default function AdsPage() {
               setEditingAd(null);
             }}
           />
-
-        </section>
+        </div>
       )}
 
-      {/* FILTER */}
+      {/* Filter */}
       {placements.length > 0 && (
-        <section className="mb-6 rounded-md border border-[#303030] bg-[#1c1c1c]">
+        <div className="mb-3 flex w-full items-center gap-2">
+          <label className="mb-0 text-[10px] font-medium text-[var(--admin-foreground)]">
+            Filter by placement
+          </label>
 
-          <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <select
+            className={`${inputClass} !w-auto min-w-[160px]`}
+            value={filter}
+            onChange={(e) =>
+              setFilter(e.target.value)
+            }
+          >
+            <option value="all">
+              All placements
+            </option>
 
-            <div>
-              <h2 className="text-[14px] font-semibold">
-                Advertisement List
-              </h2>
-
-              <p className="mt-1 text-xs text-[#666]">
-                Manage active advertisements and view
-                their performance.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <label className="whitespace-nowrap text-xs font-medium text-[#888]">
-                Placement
-              </label>
-
-              <select
-                value={filter}
-                onChange={(e) =>
-                  setFilter(e.target.value)
-                }
-                className="h-9 min-w-[180px] rounded-md border border-[#3a3a3a] bg-[#151515] px-3 text-xs text-white outline-none focus:border-[#777]"
+            {placements.map((p) => (
+              <option
+                key={p.id}
+                value={p.id}
               >
-                <option value="all">
-                  All placements
-                </option>
-
-                {placements.map((p) => (
-                  <option
-                    key={p.id}
-                    value={p.id}
-                  >
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-          </div>
-
-        </section>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
       )}
 
-      {/* ADS TABLE */}
-      <section className="overflow-hidden rounded-[3px] border border-[#303030] bg-[#1c1c1c]">
+      {/* Ads table */}
+      <section className="w-full">
+        <div className="mb-2">
+          <h2 className="text-[11px] font-medium text-[var(--admin-foreground)]">
+            Advertisement list
+          </h2>
 
-        {/* TABLE HEADER */}
-        <div className="flex items-center justify-between border-b border-[#303030] px-5 py-4">
-
-          <div>
-            <h2 className="text-[15px] font-semibold">
-              Ads
-            </h2>
-
-            <p className="mt-1 text-xs text-[#777]">
-              {visibleAds.length}{" "}
-              {visibleAds.length === 1
-                ? "advertisement"
-                : "advertisements"}
-            </p>
-          </div>
-
+          <p className="mt-0.5 text-[10px] leading-4 text-[var(--admin-muted)]">
+            Manage ad previews, schedules, status, and
+            performance.
+          </p>
         </div>
 
-        {/* TABLE */}
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] border-collapse">
-
-            <thead>
-              <tr className="border-b border-[#303030] bg-[#191919]">
-
-                <th className="px-5 py-3 text-left text-xs font-medium text-[#888]">
-                  Preview
-                </th>
-
-                <th className="px-5 py-3 text-left text-xs font-medium text-[#888]">
-                  Title
-                </th>
-
-                <th className="px-5 py-3 text-left text-xs font-medium text-[#888]">
-                  Placement
-                </th>
-
-                <th className="px-5 py-3 text-left text-xs font-medium text-[#888]">
-                  Schedule
-                </th>
-
-                <th className="px-5 py-3 text-left text-xs font-medium text-[#888]">
-                  Status
-                </th>
-
-                <th className="px-5 py-3 text-left text-xs font-medium text-[#888]">
-                  Performance
-                </th>
-
-                <th className="px-5 py-3 text-right text-xs font-medium text-[#888]">
-                  Actions
-                </th>
-
-              </tr>
-            </thead>
-
-            <tbody>
-
-              {/* LOADING */}
-              {loading && (
+        <div className="admin-table-card !w-full !max-w-none overflow-hidden">
+          <div className="w-full overflow-x-auto">
+            <table className="admin-table !w-full !text-[10px]">
+              <thead>
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="px-5 py-12 text-center text-sm text-[#666]"
-                  >
-                    Loading advertisements...
-                  </td>
-                </tr>
-              )}
+                  <th className="!px-3 !py-2">
+                    Preview
+                  </th>
 
-              {/* EMPTY */}
-              {!loading &&
-                visibleAds.length === 0 && (
+                  <th className="!px-3 !py-2">
+                    Title
+                  </th>
+
+                  <th className="!px-3 !py-2">
+                    Placement
+                  </th>
+
+                  <th className="!px-3 !py-2">
+                    Window
+                  </th>
+
+                  <th className="!px-3 !py-2">
+                    Status
+                  </th>
+
+                  <th className="!px-3 !py-2">
+                    Performance
+                  </th>
+
+                  <th className="!px-3 !py-2 text-right">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {loading && (
                   <tr>
                     <td
                       colSpan={7}
-                      className="px-5 py-12 text-center"
+                      className="
+                        !px-3
+                        !py-6
+                        text-center
+                        text-[10px]
+                        text-[var(--admin-muted)]
+                      "
                     >
-                      <div className="text-sm text-[#777]">
-                        No advertisements found.
-                      </div>
-
-                      <div className="mt-1 text-xs text-[#555]">
-                        Create your first ad using the
-                        New ad button.
-                      </div>
+                      Loading ads...
                     </td>
                   </tr>
                 )}
 
-              {/* ADS */}
-              {!loading &&
-                visibleAds.map((ad) => (
-                  <tr
-                    key={ad.id}
-                    className="border-b border-[#292929] last:border-b-0 hover:bg-[#202020]"
-                  >
+                {!loading &&
+                  visibleAds.length === 0 && (
+                    <tr>
+                      <td colSpan={7}>
+                        <div className="flex flex-col items-center justify-center px-4 py-7 text-center">
+                          <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-full border border-[var(--admin-border)] bg-[var(--admin-surface)]">
+                            <span className="text-sm text-[var(--admin-muted)]">
+                              +
+                            </span>
+                          </div>
 
-                    {/* PREVIEW */}
-                    <td className="px-5 py-4">
+                          <p className="text-[11px] font-medium text-[var(--admin-foreground)]">
+                            No ads yet
+                          </p>
 
-                      <div className="flex h-12 w-20 items-center justify-center overflow-hidden rounded-md border border-[#383838] bg-[#151515]">
+                          <p className="mt-0.5 text-[10px] text-[var(--admin-muted)]">
+                            Create your first ad to start
+                            serving advertisements.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
 
+                {visibleAds.map((ad) => (
+                  <tr key={ad.id}>
+                    {/* Preview */}
+                    <td className="!px-3 !py-2">
+                      <div className="flex h-10 w-16 items-center justify-center overflow-hidden rounded border border-[var(--admin-border)] bg-[var(--admin-surface-hover)]">
                         <img
                           src={ad.image_url}
                           alt={ad.alt_text}
                           className="h-full w-full object-cover"
                         />
-
                       </div>
-
                     </td>
 
-                    {/* TITLE */}
-                    <td className="px-5 py-4">
-                      <div className="max-w-[220px] text-sm font-medium text-white">
+                    {/* Title */}
+                    <td className="!px-3 !py-2">
+                      <div className="max-w-[220px] truncate font-medium text-[var(--admin-foreground)]">
                         {ad.title}
                       </div>
-
-                      {ad.alt_text && (
-                        <div className="mt-1 max-w-[220px] truncate text-xs text-[#666]">
-                          {ad.alt_text}
-                        </div>
-                      )}
                     </td>
 
-                    {/* PLACEMENT */}
-                    <td className="px-5 py-4">
-                      <span className="rounded bg-[#151515] px-2 py-1 text-xs text-[#999]">
+                    {/* Placement */}
+                    <td className="admin-table-muted !px-3 !py-2">
+                      <div className="max-w-[180px] truncate text-[10px]">
                         {placementName(
                           ad.placement_id
                         )}
-                      </span>
+                      </div>
                     </td>
 
-                    {/* SCHEDULE */}
-                    <td className="px-5 py-4">
-
-                      <div className="text-xs text-[#999]">
+                    {/* Window */}
+                    <td className="admin-table-muted !px-3 !py-2">
+                      <div className="whitespace-nowrap text-[10px]">
                         {ad.start_at
                           ? new Date(
                               ad.start_at
                             ).toLocaleDateString()
                           : "Always"}
-                      </div>
 
-                      <div className="mt-1 text-[11px] text-[#555]">
-                        →
-                      </div>
+                        <span className="mx-1 text-[var(--admin-subtle)]">
+                          →
+                        </span>
 
-                      <div className="text-xs text-[#999]">
                         {ad.end_at
                           ? new Date(
                               ad.end_at
                             ).toLocaleDateString()
                           : "No end"}
                       </div>
-
                     </td>
 
-                    {/* STATUS */}
-                    <td className="px-5 py-4">
-
+                    {/* Status */}
+                    <td className="!px-3 !py-2">
                       <button
+                        type="button"
+                        className={`badge !px-1.5 !py-0.5 !text-[9px] ${
+                          ad.is_active
+                            ? "badge-active"
+                            : "badge-inactive"
+                        }`}
                         onClick={() =>
                           toggle(ad)
                         }
-                        className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs transition ${
-                          ad.is_active
-                            ? "border-[#304735] bg-[#17221a] text-[#9fc5a5] hover:bg-[#1c2a20]"
-                            : "border-[#4a3434] bg-[#241818] text-[#c99595] hover:bg-[#302020]"
-                        }`}
                       >
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            ad.is_active
-                              ? "bg-[#75a77d]"
-                              : "bg-[#a56b6b]"
-                          }`}
-                        />
-
                         {ad.is_active
                           ? "Active"
                           : "Inactive"}
                       </button>
-
                     </td>
 
-                    {/* PERFORMANCE */}
-                    <td className="px-5 py-4">
-
+                    {/* Performance */}
+                    <td className="!px-3 !py-2">
                       {stats[ad.id] ? (
-                        <div className="space-y-1">
-
-                          <div className="text-xs text-[#aaa]">
-                            {stats[ad.id].impressions.toLocaleString()}{" "}
-                            views
-                          </div>
-
-                          <div className="text-[11px] text-[#666]">
-                            {stats[ad.id].clicks.toLocaleString()}{" "}
-                            clicks
-                            <span className="mx-1.5">
-                              ·
-                            </span>
-                            {stats[ad.id].ctr}% CTR
-                          </div>
-
-                        </div>
+                        <span className="whitespace-nowrap text-[9px] text-[var(--admin-muted)]">
+                          {stats[ad.id].impressions}{" "}
+                          views ·{" "}
+                          {stats[ad.id].clicks} clicks ·{" "}
+                          {stats[ad.id].ctr}% CTR
+                        </span>
                       ) : (
                         <button
+                          type="button"
+                          title="Load ad statistics"
+                          aria-label="Load ad statistics"
+                          className="
+                            flex
+                            items-center
+                            gap-1
+                            text-[9px]
+                            text-[var(--admin-muted)]
+                            transition-colors
+                            hover:text-[var(--admin-foreground)]
+                          "
                           onClick={() =>
                             loadStats(ad.id)
                           }
-                          className="text-xs text-[#aaa] underline decoration-[#555] underline-offset-2 transition hover:text-white"
                         >
+                          <Eye
+                            size={12}
+                            strokeWidth={1.8}
+                          />
                           Load stats
                         </button>
                       )}
-
                     </td>
 
-                    {/* ACTIONS */}
-                    <td className="px-5 py-4">
-
-                      <div className="flex justify-end gap-2">
-
+                    {/* Actions */}
+                    <td className="!px-3 !py-2">
+                      <div className="flex items-center justify-end gap-0.5">
                         <button
+                          type="button"
+                          title="Edit ad"
+                          aria-label="Edit ad"
+                          className={iconButtonClass}
                           onClick={() => {
                             setEditingAd(ad);
                             setShowForm(true);
                           }}
-                          className="h-8 rounded-md border border-[#3a3a3a] bg-[#222] px-3 text-xs text-[#ccc] transition hover:bg-[#2b2b2b] hover:text-white"
                         >
-                          Edit
+                          <Pencil
+                            size={13}
+                            strokeWidth={1.8}
+                          />
                         </button>
 
                         <button
+                          type="button"
+                          title="Delete ad"
+                          aria-label="Delete ad"
+                          className={
+                            dangerIconButtonClass
+                          }
                           onClick={() =>
                             remove(ad.id)
                           }
-                          className="h-8 rounded-md border border-[#4a3030] bg-[#241919] px-3 text-xs text-[#c99] transition hover:bg-[#302020]"
                         >
-                          Delete
+                          <Trash2
+                            size={13}
+                            strokeWidth={1.8}
+                          />
                         </button>
-
                       </div>
-
                     </td>
-
                   </tr>
                 ))}
-
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
-    </div>
+    </main>
   );
 }

@@ -30,6 +30,15 @@ class VendorCreate(BaseModel):
     allowed_domains: Optional[str] = ""
 
 
+class VendorUpdate(BaseModel):
+    """Partial update - only send the fields you want to change.
+    Use this (not VendorCreate) for PATCH so toggling is_active doesn't
+    require resending name/slug/allowed_domains."""
+    name: Optional[str] = None
+    allowed_domains: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
 class VendorOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str
@@ -47,6 +56,7 @@ class PlacementCreate(BaseModel):
     vendor_id: str
     name: str
     slug: str
+    description: Optional[str] = ""
     desktop_width: int = 1320
     desktop_height: int = 300
     tablet_height: int = 260
@@ -55,6 +65,7 @@ class PlacementCreate(BaseModel):
 
 class PlacementUpdate(BaseModel):
     name: Optional[str] = None
+    description: Optional[str] = None
     desktop_width: Optional[int] = None
     desktop_height: Optional[int] = None
     tablet_height: Optional[int] = None
@@ -68,6 +79,7 @@ class PlacementOut(BaseModel):
     vendor_id: str
     name: str
     slug: str
+    description: str
     desktop_width: int
     desktop_height: int
     tablet_height: int
@@ -126,6 +138,28 @@ class AdStats(BaseModel):
     impressions: int
     clicks: int
     ctr: float
+
+
+class VendorSummary(BaseModel):
+    vendor_id: str
+    vendor_name: str
+    placements: int
+    active_ads: int
+    impressions: int
+    clicks: int
+    ctr: float
+
+
+class OverviewStats(BaseModel):
+    total_vendors: int
+    active_vendors: int
+    total_placements: int
+    total_ads: int
+    active_ads: int
+    total_impressions: int
+    total_clicks: int
+    overall_ctr: float
+    by_vendor: List[VendorSummary]
 
 
 # ---------- Public widget ----------

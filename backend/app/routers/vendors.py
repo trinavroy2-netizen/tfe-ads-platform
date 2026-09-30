@@ -37,11 +37,11 @@ def rotate_key(vendor_id: str, db: Session = Depends(get_db), _=Depends(get_curr
 
 
 @router.patch("/{vendor_id}", response_model=schemas.VendorOut)
-def update_vendor(vendor_id: str, payload: schemas.VendorCreate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def update_vendor(vendor_id: str, payload: schemas.VendorUpdate, db: Session = Depends(get_db), _=Depends(get_current_user)):
     vendor = db.query(models.Vendor).filter(models.Vendor.id == vendor_id).first()
     if not vendor:
         raise HTTPException(404, "Vendor not found")
-    for k, v in payload.model_dump().items():
+    for k, v in payload.model_dump(exclude_unset=True).items():
         setattr(vendor, k, v)
     db.commit()
     db.refresh(vendor)

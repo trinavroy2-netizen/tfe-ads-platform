@@ -58,6 +58,7 @@ class Placement(Base):
     vendor_id = Column(UUID(as_uuid=False), ForeignKey("vendors.id"), nullable=False)
     name = Column(String, nullable=False)          # "Homepage"
     slug = Column(String, nullable=False, index=True)  # "homepage"
+    description = Column(Text, default="")         # optional internal note, e.g. "Above-the-fold banner"
     desktop_width = Column(Integer, default=1320)
     desktop_height = Column(Integer, default=300)
     tablet_height = Column(Integer, default=260)

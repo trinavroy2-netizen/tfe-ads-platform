@@ -6,20 +6,32 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "build:ads-component": "terser ../backend/components/msi-ads-component.js --compress --mangle --comments false --output ../backend/components/msi-ads-component.min.js"
   },
   "dependencies": {
+    "lucide-react": "^1.48.0",
     "next": "14.2.34",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
   "devDependencies": {
-    "typescript": "5.5.4",
     "@types/node": "20.14.15",
     "@types/react": "18.3.5",
     "@types/react-dom": "18.3.0",
-    "tailwindcss": "3.4.10",
+    "autoprefixer": "10.4.20",
     "postcss": "8.4.41",
-    "autoprefixer": "10.4.20"
-  }
+    "tailwindcss": "3.4.10",
+    "terser": "^5.51.2",
+    "typescript": "5.5.4"
+  },
+  "description": "",
+  "main": "next.config.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
 }
