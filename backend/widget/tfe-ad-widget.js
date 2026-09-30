@@ -1,34 +1,14 @@
-/*!
- * TFE Ad Widget — embeddable ad slot for vendor websites
- *
- * No build step.
- * No framework dependency.
- *
- * Features:
- * - Fully responsive
- * - Preserves actual banner aspect ratio
- * - No image cropping
- * - No image stretching
- * - Desktop / tablet / mobile support
- * - Multiple slots per page
- * - Auto rotation
- * - Dot navigation
- * - Impression tracking
- * - Click tracking
- * - IntersectionObserver visibility tracking
- * - ResizeObserver responsive recalculation
- */
-
 (function (window, document) {
   "use strict";
 
   var DEFAULTS = {
-    apiBase: "http://localhost:8000",
+    // Production-safe default.
+    // For local testing, use data-api-base="http://127.0.0.1:8000"
+    apiBase: "https://tfe-ads-backend.onrender.com",
     interval: 4000,
     transition: 600,
-
     desktopWidth: 1320,
-    desktopHeight: 300,
+    desktopHeight: 300
   };
 
   /* =====================================================
@@ -78,9 +58,8 @@
       /*
        * TFE AD WIDGET
        *
-       * IMPORTANT:
        * The widget does NOT force a fixed height.
-       * The image controls the actual height.
+       * The image's natural aspect ratio controls height.
        */
 
       .tfe-ad-widget {
@@ -157,50 +136,34 @@
         vertical-align: top;
       }
 
-      /*
-       * DOTS
-       */
+      /* DOTS */
+
       .tfe-ad-dots {
         position: absolute;
-
         left: 0;
         right: 0;
         bottom: 8px;
-
         display: flex;
-
         justify-content: center;
         align-items: center;
-
         gap: 6px;
-
         z-index: 10;
-
         pointer-events: none;
-
         line-height: normal;
       }
 
       .tfe-ad-dot {
         width: 7px;
         height: 7px;
-
         min-width: 7px;
         min-height: 7px;
-
         padding: 0;
         margin: 0;
-
         border: 1px solid rgba(0, 0, 0, 0.15);
-
         border-radius: 50%;
-
         background: rgba(255, 255, 255, 0.65);
-
         cursor: pointer;
-
         pointer-events: auto;
-
         box-sizing: border-box;
       }
 
@@ -208,54 +171,38 @@
         background: #1a73e8;
       }
 
-      /*
-       * AD LABEL
-       */
+      /* AD LABEL */
+
       .tfe-ad-label {
         position: absolute;
-
         top: 4px;
         right: 6px;
-
         z-index: 11;
-
         font: 10px/1 sans-serif;
-
         color: rgba(0, 0, 0, 0.35);
-
         letter-spacing: 0.05em;
-
         pointer-events: none;
       }
 
-      /*
-       * Empty widget
-       */
+      /* EMPTY WIDGET */
+
       .tfe-ad-widget:empty {
         display: none;
       }
 
-      /*
-       * TABLET
-       */
+      /* TABLET */
+
       @media (max-width: 900px) {
         .tfe-ad-widget {
           width: 100%;
           max-width: 100%;
           height: auto;
           min-height: 0;
-
           border-radius: 6px;
         }
 
-        .tfe-ad-track {
-          height: auto;
-        }
-
-        .tfe-ad-slide {
-          height: auto;
-        }
-
+        .tfe-ad-track,
+        .tfe-ad-slide,
         .tfe-ad-slide a {
           height: auto;
         }
@@ -269,29 +216,28 @@
         .tfe-ad-dots {
           bottom: 6px;
         }
+
+        .tfe-ad-widget,
+        .tfe-ad-slide,
+        .tfe-ad-slide a,
+        .tfe-ad-slide img {
+          border-radius: 6px;
+        }
       }
 
-      /*
-       * MOBILE
-       */
+      /* MOBILE */
+
       @media (max-width: 650px) {
         .tfe-ad-widget {
           width: 100%;
           max-width: 100%;
           height: auto;
           min-height: 0;
-
           border-radius: 4px;
         }
 
-        .tfe-ad-track {
-          height: auto;
-        }
-
-        .tfe-ad-slide {
-          height: auto;
-        }
-
+        .tfe-ad-track,
+        .tfe-ad-slide,
         .tfe-ad-slide a {
           height: auto;
         }
@@ -310,21 +256,24 @@
         .tfe-ad-dot {
           width: 6px;
           height: 6px;
-
           min-width: 6px;
           min-height: 6px;
+        }
+
+        .tfe-ad-widget,
+        .tfe-ad-slide,
+        .tfe-ad-slide a,
+        .tfe-ad-slide img {
+          border-radius: 4px;
         }
       }
     `;
 
     var style = el("style", {
-      id: "tfe-ad-widget-styles",
+      id: "tfe-ad-widget-styles"
     });
 
-    style.appendChild(
-      document.createTextNode(css)
-    );
-
+    style.appendChild(document.createTextNode(css));
     document.head.appendChild(style);
   }
 
@@ -332,26 +281,27 @@
      TRACKING
   ===================================================== */
 
-  function sendBeacon(apiBase, body) {
-    var url =
-      cleanUrl(apiBase) +
-      "/api/public/track";
-
+  function sendBeacon(apiBase, body, apiKey) {
+    var url = cleanUrl(apiBase) + "/api/public/track";
     var json = JSON.stringify(body);
 
     try {
       if (navigator.sendBeacon) {
-        navigator.sendBeacon(
-          url,
-          new Blob(
-            [json],
-            {
-              type: "application/json",
-            }
-          )
-        );
+        var headers = {
+          type: "application/json"
+        };
 
-        return;
+        /*
+         * sendBeacon cannot reliably send custom X-API-Key
+         * headers. Therefore use fetch when an API key exists.
+         */
+        if (!apiKey) {
+          navigator.sendBeacon(
+            url,
+            new Blob([json], headers)
+          );
+          return;
+        }
       }
     } catch (e) {
       /* fallback to fetch */
@@ -361,9 +311,10 @@
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...(apiKey ? { "X-API-Key": apiKey } : {})
       },
       body: json,
-      keepalive: true,
+      keepalive: true
     }).catch(function () {});
   }
 
@@ -394,21 +345,13 @@
       ) || DEFAULTS.interval;
 
     this.index = 0;
-
     this.ads = [];
-
     this.impressed = {};
-
     this.timer = null;
-
     this.track = null;
-
     this.dotsWrap = null;
-
     this.observer = null;
-
     this.resizeObserver = null;
-
     this.dimensions = {};
   }
 
@@ -428,12 +371,11 @@
 
     return fetch(url, {
       method: "GET",
-
       headers: self.apiKey
         ? {
-            "X-API-Key": self.apiKey,
+            "X-API-Key": self.apiKey
           }
-        : {},
+        : {}
     })
       .then(function (res) {
         if (!res.ok) {
@@ -446,7 +388,6 @@
 
         return res.json();
       })
-
       .then(function (data) {
         self.ads =
           Array.isArray(data.ads)
@@ -458,7 +399,6 @@
 
         return data;
       })
-
       .catch(function (err) {
         console.warn(
           "[tfe-ad-widget]",
@@ -466,7 +406,6 @@
         );
 
         self.ads = [];
-
         self.dimensions = {};
 
         return null;
@@ -479,14 +418,10 @@
 
   AdSlot.prototype.applySizing = function () {
     var self = this;
-
-    var d =
-      self.dimensions || {};
+    var d = self.dimensions || {};
 
     var desktopWidth =
-      parseFloat(
-        d.desktop_width
-      );
+      parseFloat(d.desktop_width);
 
     /*
      * Fallback only for maximum width.
@@ -502,28 +437,19 @@
     /*
      * IMPORTANT:
      *
-     * Do NOT set aspect-ratio.
-     * Do NOT set fixed height.
+     * No aspect-ratio.
+     * No fixed height.
      *
-     * The image's natural dimensions
-     * determine the height.
+     * Image determines actual height.
      */
 
-    self.container.style.width =
-      "100%";
-
+    self.container.style.width = "100%";
     self.container.style.maxWidth =
       desktopWidth + "px";
-
-    self.container.style.height =
-      "auto";
-
-    self.container.style.minHeight =
-      "0";
-
+    self.container.style.height = "auto";
+    self.container.style.minHeight = "0";
     self.container.style.boxSizing =
       "border-box";
-
     self.container.style.overflow =
       "hidden";
   };
@@ -536,9 +462,7 @@
     function () {
       var self = this;
 
-      if (
-        !("ResizeObserver" in window)
-      ) {
+      if (!("ResizeObserver" in window)) {
         window.addEventListener(
           "resize",
           function () {
@@ -549,9 +473,7 @@
         return;
       }
 
-      if (
-        self.resizeObserver
-      ) {
+      if (self.resizeObserver) {
         try {
           self.resizeObserver.disconnect();
         } catch (e) {}
@@ -560,11 +482,9 @@
       }
 
       self.resizeObserver =
-        new ResizeObserver(
-          function () {
-            self.applySizing();
-          }
-        );
+        new ResizeObserver(function () {
+          self.applySizing();
+        });
 
       self.resizeObserver.observe(
         self.container
@@ -575,402 +495,338 @@
      RENDER
   ===================================================== */
 
-  AdSlot.prototype.render =
-    function () {
-      var self = this;
+  AdSlot.prototype.render = function () {
+    var self = this;
 
-      self.stopAutoplay();
+    self.stopAutoplay();
 
-      if (
-        self.observer
-      ) {
-        try {
-          self.observer.disconnect();
-        } catch (e) {}
+    if (self.observer) {
+      try {
+        self.observer.disconnect();
+      } catch (e) {}
 
-        self.observer = null;
-      }
+      self.observer = null;
+    }
 
-      if (
-        self.resizeObserver
-      ) {
-        try {
-          self.resizeObserver.disconnect();
-        } catch (e) {}
+    if (self.resizeObserver) {
+      try {
+        self.resizeObserver.disconnect();
+      } catch (e) {}
 
-        self.resizeObserver = null;
-      }
+      self.resizeObserver = null;
+    }
 
-      self.container.innerHTML = "";
+    self.container.innerHTML = "";
+    self.track = null;
+    self.dotsWrap = null;
 
-      self.track = null;
+    /*
+     * No ads.
+     */
+    if (!self.ads.length) {
+      self.container.style.height = "0px";
+      return;
+    }
 
-      self.dotsWrap = null;
+    /*
+     * Width only.
+     */
+    self.applySizing();
+
+    /*
+     * Carousel track.
+     */
+    var track = el("div", {
+      class: "tfe-ad-track"
+    });
+
+    /*
+     * Dots.
+     */
+    var dotsWrap = el("div", {
+      class: "tfe-ad-dots"
+    });
+
+    self.ads.forEach(function (ad, i) {
+      /*
+       * IMAGE
+       */
+
+      var img = el("img", {
+        src: ad.image_url,
+        alt:
+          ad.alt_text ||
+          ad.title ||
+          "Advertisement",
+        loading:
+          i === 0
+            ? "eager"
+            : "lazy",
+        decoding: "async"
+      });
 
       /*
-       * No ads.
+       * Natural image ratio.
        */
-      if (
-        !self.ads.length
-      ) {
-        self.container.style.height =
-          "0px";
 
-        return;
-      }
+      img.style.display = "block";
+      img.style.width = "100%";
+      img.style.height = "auto";
+      img.style.maxWidth = "100%";
+      img.style.minWidth = "0";
+      img.style.minHeight = "0";
+      img.style.margin = "0";
+      img.style.padding = "0";
+      img.style.border = "0";
+      img.style.objectFit = "contain";
+      img.style.objectPosition =
+        "center center";
+      img.style.boxSizing =
+        "border-box";
 
       /*
-       * Apply width only.
+       * LINK
        */
-      self.applySizing();
+
+      var targetUrl =
+        ad.target_url ||
+        ad.click_url ||
+        "#";
+
+      var anchor = el(
+        "a",
+        {
+          href: targetUrl,
+
+          target:
+            ad.open_in_new_tab === false
+              ? "_self"
+              : "_blank",
+
+          rel:
+            "noopener noreferrer sponsored",
+
+          "aria-label":
+            ad.title ||
+            "Advertisement"
+        },
+        [img]
+      );
 
       /*
-       * Carousel track.
+       * CLICK TRACKING
        */
-      var track =
-        el("div", {
-          class: "tfe-ad-track",
-        });
 
-      var dotsWrap =
-        el("div", {
-          class: "tfe-ad-dots",
-        });
-
-      self.ads.forEach(
-        function (ad, i) {
-
-          /*
-           * IMAGE
-           */
-          var img =
-            el(
-              "img",
-              {
-                src:
-                  ad.image_url,
-
-                alt:
-                  ad.alt_text ||
-                  ad.title ||
-                  "Advertisement",
-
-                loading:
-                  i === 0
-                    ? "eager"
-                    : "lazy",
-
-                decoding:
-                  "async",
-              }
-            );
-
-          /*
-           * IMPORTANT:
-           *
-           * Natural image ratio.
-           */
-          img.style.display =
-            "block";
-
-          img.style.width =
-            "100%";
-
-          img.style.height =
-            "auto";
-
-          img.style.maxWidth =
-            "100%";
-
-          img.style.minWidth =
-            "0";
-
-          img.style.minHeight =
-            "0";
-
-          img.style.margin =
-            "0";
-
-          img.style.padding =
-            "0";
-
-          img.style.border =
-            "0";
-
-          img.style.objectFit =
-            "contain";
-
-          img.style.objectPosition =
-            "center center";
-
-          img.style.boxSizing =
-            "border-box";
-
-          /*
-           * LINK
-           */
-          var anchor =
-            el(
-              "a",
-              {
-                href:
-                  ad.target_url ||
-                  "#",
-
-                target:
-                  ad.open_in_new_tab
-                    ? "_blank"
-                    : "_self",
-
-                rel:
-                  "noopener noreferrer sponsored",
-
-                "aria-label":
-                  ad.title ||
-                  "Advertisement",
-              },
-              [img]
-            );
-
-          /*
-           * CLICK TRACKING
-           */
-          anchor.addEventListener(
-            "click",
-            function () {
-              sendBeacon(
-                self.apiBase,
-                {
-                  ad_id:
-                    ad.id,
-
-                  event_type:
-                    "click",
-                }
-              );
-            }
+      anchor.addEventListener(
+        "click",
+        function () {
+          sendBeacon(
+            self.apiBase,
+            {
+              ad_id: ad.id,
+              event_type: "click"
+            },
+            self.apiKey
           );
-
-          /*
-           * SLIDE
-           */
-          var slide =
-            el(
-              "div",
-              {
-                class:
-                  "tfe-ad-slide",
-              },
-              [anchor]
-            );
-
-          track.appendChild(
-            slide
-          );
-
-          /*
-           * DOT NAVIGATION
-           */
-          if (
-            self.ads.length > 1
-          ) {
-            var dot =
-              el(
-                "button",
-                {
-                  class:
-                    "tfe-ad-dot" +
-                    (
-                      i === 0
-                        ? " active"
-                        : ""
-                    ),
-
-                  "aria-label":
-                    "Go to ad " +
-                    (i + 1),
-
-                  type:
-                    "button",
-                }
-              );
-
-            dot.addEventListener(
-              "click",
-              function () {
-                self.goTo(i);
-
-                self.restartAutoplay();
-              }
-            );
-
-            dotsWrap.appendChild(
-              dot
-            );
-          }
         }
       );
 
       /*
-       * Add carousel.
+       * SLIDE
        */
-      self.container.appendChild(
-        track
+
+      var slide = el(
+        "div",
+        {
+          class: "tfe-ad-slide"
+        },
+        [anchor]
       );
 
-      /*
-       * Add dots.
-       */
-      if (
-        self.ads.length > 1
-      ) {
-        self.container.appendChild(
-          dotsWrap
-        );
-      }
+      track.appendChild(slide);
 
       /*
-       * Ad label.
+       * DOT NAVIGATION
        */
-      self.container.appendChild(
-        el(
-          "span",
+
+      if (self.ads.length > 1) {
+        var dot = el(
+          "button",
           {
             class:
-              "tfe-ad-label",
-          },
-          [
-            document.createTextNode(
-              "Ad"
-            ),
-          ]
-        )
+              "tfe-ad-dot" +
+              (i === 0
+                ? " active"
+                : ""),
+
+            "aria-label":
+              "Go to ad " + (i + 1),
+
+            type: "button"
+          }
+        );
+
+        dot.addEventListener(
+          "click",
+          function () {
+            self.goTo(i);
+            self.restartAutoplay();
+          }
+        );
+
+        dotsWrap.appendChild(dot);
+      }
+    });
+
+    /*
+     * Add track.
+     */
+
+    self.container.appendChild(track);
+
+    /*
+     * Add dots.
+     */
+
+    if (self.ads.length > 1) {
+      self.container.appendChild(
+        dotsWrap
+      );
+    }
+
+    /*
+     * Ad label.
+     */
+
+    self.container.appendChild(
+      el(
+        "span",
+        {
+          class: "tfe-ad-label"
+        },
+        [
+          document.createTextNode("Ad")
+        ]
+      )
+    );
+
+    self.track = track;
+    self.dotsWrap = dotsWrap;
+    self.index = 0;
+
+    self.goTo(0);
+    self.observeVisibility();
+    self.setupResizeObserver();
+
+    /*
+     * Autoplay.
+     */
+
+    if (self.ads.length > 1) {
+      self.startAutoplay();
+
+      self.container.addEventListener(
+        "mouseenter",
+        function () {
+          self.stopAutoplay();
+        }
       );
 
-      self.track =
-        track;
-
-      self.dotsWrap =
-        dotsWrap;
-
-      self.index = 0;
-
-      self.goTo(0);
-
-      self.observeVisibility();
-
-      self.setupResizeObserver();
-
-      /*
-       * Autoplay.
-       */
-      if (
-        self.ads.length > 1
-      ) {
-        self.startAutoplay();
-
-        self.container.addEventListener(
-          "mouseenter",
-          function () {
-            self.stopAutoplay();
-          }
-        );
-
-        self.container.addEventListener(
-          "mouseleave",
-          function () {
-            self.startAutoplay();
-          }
-        );
-      }
-    };
+      self.container.addEventListener(
+        "mouseleave",
+        function () {
+          self.startAutoplay();
+        }
+      );
+    }
+  };
 
   /* =====================================================
      GO TO AD
   ===================================================== */
 
-  AdSlot.prototype.goTo =
-    function (i) {
-      var self = this;
+  AdSlot.prototype.goTo = function (i) {
+    var self = this;
 
-      if (
-        !self.ads.length
-      ) {
-        return;
-      }
+    if (!self.ads.length) {
+      return;
+    }
 
-      if (i < 0) {
-        i = 0;
-      }
+    if (i < 0) {
+      i = 0;
+    }
 
-      if (
-        i >= self.ads.length
-      ) {
-        i =
-          self.ads.length - 1;
-      }
+    if (i >= self.ads.length) {
+      i = self.ads.length - 1;
+    }
 
-      self.index = i;
+    self.index = i;
 
-      /*
-       * Move carousel.
-       */
-      if (
-        self.track
-      ) {
-        self.track.style.transform =
-          "translate3d(-" +
-          (i * 100) +
-          "%, 0, 0)";
-      }
+    /*
+     * Move carousel.
+     */
 
-      /*
-       * Update dots.
-       */
-      if (
-        self.dotsWrap
-      ) {
-        Array.prototype.forEach.call(
-          self.dotsWrap.children,
-          function (
-            dot,
-            idx
-          ) {
-            dot.classList.toggle(
-              "active",
-              idx === i
-            );
-          }
-        );
-      }
+    if (self.track) {
+      self.track.style.transition =
+        "transform " +
+        DEFAULTS.transition +
+        "ms ease-in-out";
 
-      self.markImpression(i);
-    };
+      self.track.style.transform =
+        "translate3d(-" +
+        i * 100 +
+        "%, 0, 0)";
+    }
+
+    /*
+     * Update dots.
+     */
+
+    if (self.dotsWrap) {
+      Array.prototype.forEach.call(
+        self.dotsWrap.children,
+        function (dot, idx) {
+          dot.classList.toggle(
+            "active",
+            idx === i
+          );
+
+          dot.setAttribute(
+            "aria-current",
+            idx === i
+              ? "true"
+              : "false"
+          );
+        }
+      );
+    }
+
+    /*
+     * Impression tracking.
+     *
+     * IntersectionObserver also validates visibility.
+     */
+
+    self.markImpression(i);
+  };
 
   /* =====================================================
      NEXT AD
   ===================================================== */
 
-  AdSlot.prototype.next =
-    function () {
-      var self = this;
+  AdSlot.prototype.next = function () {
+    var self = this;
 
-      if (
-        !self.ads.length
-      ) {
-        return;
-      }
+    if (!self.ads.length) {
+      return;
+    }
 
-      var nextIndex =
-        (
-          self.index + 1
-        ) %
-        self.ads.length;
+    var nextIndex =
+      (self.index + 1) %
+      self.ads.length;
 
-      self.goTo(
-        nextIndex
-      );
-    };
+    self.goTo(nextIndex);
+  };
 
   /* =====================================================
      START AUTOPLAY
@@ -982,9 +838,7 @@
 
       self.stopAutoplay();
 
-      if (
-        self.ads.length <= 1
-      ) {
+      if (self.ads.length <= 1) {
         return;
       }
 
@@ -1003,9 +857,7 @@
 
   AdSlot.prototype.stopAutoplay =
     function () {
-      if (
-        this.timer
-      ) {
+      if (this.timer) {
         window.clearInterval(
           this.timer
         );
@@ -1020,9 +872,7 @@
 
   AdSlot.prototype.restartAutoplay =
     function () {
-      if (
-        this.ads.length > 1
-      ) {
+      if (this.ads.length > 1) {
         this.startAutoplay();
       }
     };
@@ -1033,8 +883,7 @@
 
   AdSlot.prototype.markImpression =
     function (i) {
-      var ad =
-        this.ads[i];
+      var ad = this.ads[i];
 
       if (
         !ad ||
@@ -1043,18 +892,19 @@
         return;
       }
 
-      this.impressed[ad.id] =
-        true;
+      /*
+       * Mark once per widget load.
+       */
+
+      this.impressed[ad.id] = true;
 
       sendBeacon(
         this.apiBase,
         {
-          ad_id:
-            ad.id,
-
-          event_type:
-            "impression",
-        }
+          ad_id: ad.id,
+          event_type: "impression"
+        },
+        this.apiKey
       );
     };
 
@@ -1081,15 +931,13 @@
 
       var observer =
         new IntersectionObserver(
-          function (
-            entries
-          ) {
+          function (entries) {
             entries.forEach(
-              function (
-                entry
-              ) {
+              function (entry) {
                 if (
-                  entry.isIntersecting
+                  entry.isIntersecting &&
+                  entry.intersectionRatio >=
+                    0.5
                 ) {
                   self.markImpression(
                     self.index
@@ -1099,7 +947,7 @@
             );
           },
           {
-            threshold: 0.5,
+            threshold: 0.5
           }
         );
 
@@ -1107,26 +955,22 @@
         self.container
       );
 
-      self.observer =
-        observer;
+      self.observer = observer;
     };
 
   /* =====================================================
      INITIALIZE SLOT
   ===================================================== */
 
-  AdSlot.prototype.init =
-    function () {
-      var self = this;
+  AdSlot.prototype.init = function () {
+    var self = this;
 
-      return self
-        .fetchAds()
-        .then(
-          function () {
-            self.render();
-          }
-        );
-    };
+    return self
+      .fetchAds()
+      .then(function () {
+        self.render();
+      });
+  };
 
   /* =====================================================
      INITIALIZE ALL WIDGETS
@@ -1136,18 +980,13 @@
     injectStylesOnce();
 
     var containers =
-      (
-        root ||
-        document
-      ).querySelectorAll(
+      (root || document).querySelectorAll(
         ".tfe-ad-widget:not([data-tfe-initialized])"
       );
 
     Array.prototype.forEach.call(
       containers,
-      function (
-        container
-      ) {
+      function (container) {
         if (
           !container.getAttribute(
             "data-vendor"
@@ -1169,9 +1008,7 @@
         );
 
         var slot =
-          new AdSlot(
-            container
-          );
+          new AdSlot(container);
 
         slot.init();
 
@@ -1187,23 +1024,17 @@
 
   function refreshAll(root) {
     var containers =
-      (
-        root ||
-        document
-      ).querySelectorAll(
+      (root || document).querySelectorAll(
         ".tfe-ad-widget[data-tfe-initialized]"
       );
 
     Array.prototype.forEach.call(
       containers,
-      function (
-        container
-      ) {
+      function (container) {
         if (
           container._tfeAdSlot
         ) {
           container._tfeAdSlot.stopAutoplay();
-
           container._tfeAdSlot.init();
         }
       }
@@ -1216,7 +1047,7 @@
 
   window.TFEAdWidget = {
     init: initAll,
-    refresh: refreshAll,
+    refresh: refreshAll
   };
 
   /* =====================================================

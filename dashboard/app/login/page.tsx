@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { API_BASE, setToken } from "@/lib/api";
+import AdsComponent from "@/components/AdsComponent";
+
 
 export default function LoginPage() {
   const router = useRouter();
