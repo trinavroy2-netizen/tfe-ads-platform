@@ -21,7 +21,7 @@ def _hostname(url_or_host: str) -> str:
     Extract a bare hostname from an Origin/Referer header or a plain
     domain entry.
 
-    Supports values such as:
+    Supports:
         https://example.com
         http://example.com:5500
         example.com
@@ -46,9 +46,8 @@ def _domain_allowed(
     Check the calling browser's Origin against the vendor's
     configured allowed_domains.
 
-    If allowed_domains is empty, the vendor remains open for testing.
-
-    The API key is still required separately for /ads.
+    Empty allowed_domains means the vendor is currently open
+    for testing.
     """
 
     allowed_raw = (vendor.allowed_domains or "").strip()
@@ -78,8 +77,8 @@ def _domain_allowed(
     )
 
     if not origin:
-        # Server-to-server / curl requests may not have Origin.
-        # API key authentication is still enforced separately.
+        # Non-browser requests such as curl/server-to-server
+        # do not necessarily send Origin.
         return True
 
     return _hostname(origin) in expanded
@@ -140,12 +139,10 @@ def get_public_ads(
     Public endpoint used by the embeddable ads widget.
 
     Example:
-
-    GET /api/public/ads?vendor=toolsforengineers&placement=homepage
+        GET /api/public/ads?vendor=toolsforengineers&placement=homepage
 
     Required header:
-
-    X-API-Key: <vendor api key>
+        X-API-Key: <vendor api key>
     """
 
     # 1. Resolve and authenticate vendor
@@ -172,14 +169,67 @@ def get_public_ads(
             detail="Unknown or inactive placement",
         )
 
-    # 3. Get current UTC time.
+    # 3. Current UTC time.
     #
-    # Database currently uses DateTime without timezone=True,
-    # so we intentionally convert UTC to a naive datetime before
-    # comparing with start_at/end_at.
+    # The database currently uses SQLAlchemy DateTime without
+    # timezone=True, so we compare using a UTC-naive datetime.
     now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
 
-    # 4. Return only currently active and scheduled ads
+    # ---------------------------------------------------------
+    # TEMPORARY SCHEDULE DEBUG
+    # ---------------------------------------------------------
+    print(
+        "[SCHEDULE DEBUG]",
+        {
+            "vendor": vendor_obj.slug,
+            "placement": placement_obj.slug,
+            "now_utc": now_utc,
+        },
+    )
+
+    all_ads = (
+        db.query(models.Ad)
+        .filter(
+            models.Ad.placement_id == placement_obj.id,
+        )
+        .order_by(
+            models.Ad.created_at.desc(),
+        )
+        .all()
+    )
+
+    for ad in all_ads:
+        start_passed = (
+            ad.start_at is None
+            or ad.start_at <= now_utc
+        )
+
+        end_not_passed = (
+            ad.end_at is None
+            or ad.end_at >= now_utc
+        )
+
+        print(
+            "[SCHEDULE DEBUG]",
+            {
+                "id": ad.id,
+                "title": ad.title,
+                "is_active": ad.is_active,
+                "start_at": ad.start_at,
+                "end_at": ad.end_at,
+                "start_passed": start_passed,
+                "end_not_passed": end_not_passed,
+                "eligible": (
+                    ad.is_active
+                    and start_passed
+                    and end_not_passed
+                ),
+            },
+        )
+
+    # ---------------------------------------------------------
+    # 4. Get currently eligible ads
+    # ---------------------------------------------------------
     ads = (
         db.query(models.Ad)
         .filter(
@@ -199,6 +249,11 @@ def get_public_ads(
             models.Ad.created_at.desc(),
         )
         .all()
+    )
+
+    print(
+        "[SCHEDULE DEBUG] eligible_ads_count =",
+        len(ads),
     )
 
     # 5. Return public-safe ad data
@@ -236,7 +291,7 @@ def track_event(
     Fire-and-forget impression/click tracking.
 
     The widget does not need an API key for tracking because
-    this endpoint is designed for cross-origin beacon requests.
+    this endpoint is designed for cross-origin beacon calls.
 
     The ad must exist and its vendor domain must authorize
     the requesting origin.
