@@ -1,4 +1,4 @@
-# MSI Universal Multi-Vendor Ads Platform
+# Universal Multi-Vendor Ads Platform
 
 MSI manages every vendor's advertising from one dashboard. Each vendor embeds
 the **same** ad component on their site with three values — vendor, placement,
